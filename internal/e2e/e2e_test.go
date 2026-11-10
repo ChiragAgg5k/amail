@@ -99,6 +99,20 @@ func TestReadAndTriage(t *testing.T) {
 				t.Errorf("message %d is listed in %q, want %q", row.ID, row.Mailbox, current.source)
 			}
 		}
+		for position := 1; position < len(rows); position++ {
+			earlier, later := rows[position].Received, rows[position-1].Received
+			if earlier != nil && (later == nil || later.Before(*earlier)) {
+				t.Errorf("message %d is listed before the newer message %d", rows[position-1].ID, rows[position].ID)
+			}
+		}
+		var newest []summary
+		current.run(t, "list", "--mailbox", current.source, "--limit", "1").expect(t, failure.Success).decode(t, &newest)
+		if len(newest) != 1 {
+			t.Fatalf("list --limit 1 returned %d messages", len(newest))
+		}
+		if first := rows[0].Received; first != nil && (newest[0].Received == nil || newest[0].Received.Before(*first)) {
+			t.Errorf("list --limit 1 returned message %d, which is older than the newest listed message %d", newest[0].ID, rows[0].ID)
+		}
 	})
 
 	t.Run("read", func(t *testing.T) {
@@ -130,6 +144,11 @@ func TestReadAndTriage(t *testing.T) {
 			if !strings.Contains(strings.ToLower(row.Subject+" "+row.Sender), strings.ToLower(marker)) {
 				t.Errorf("search returned message %d whose subject and sender lack the marker", row.ID)
 			}
+		}
+		var shouted []summary
+		current.run(t, "search", strings.ToUpper(marker), "--mailbox", current.source, "--limit", "0").expect(t, failure.Success).decode(t, &shouted)
+		if len(shouted) != len(found) {
+			t.Errorf("search for the marker in capitals found %d messages, want %d", len(shouted), len(found))
 		}
 		t.Logf("search found %d messages", len(found))
 	})

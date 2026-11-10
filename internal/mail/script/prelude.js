@@ -5,6 +5,16 @@ const preludeLocal = 'local';
 const preludeInbox = 'inbox';
 const preludeDay = 86400000;
 const preludeWindows = [3, 14, 60, 365, 3650];
+const preludeNotPermitted = -1743;
+const preludeTimedOut = -1712;
+const preludeFields = ['messageId', 'subject', 'sender', 'dateReceived', 'readStatus', 'flaggedStatus'];
+// The properties Mail can refuse for a single message, which `describe` reads leniently too.
+const preludeGuarded = ['messageId', 'subject', 'sender', 'dateReceived'];
+// How many one-by-one reads of a property cost as much as reading it for one message
+// of a whole mailbox at once (about 8 ms against 35 microseconds, measured on a
+// 13,370-message mailbox). The Message-ID is 4 to 25 times dearer to read in bulk.
+const preludeBulkAdvantage = 200;
+const preludeMessageIdAdvantage = 25;
 
 function run(argv) {
   try {
@@ -208,6 +218,12 @@ function describe(message, mailboxName) {
   };
 }
 
+function preludeChanged() {
+  const error = new Error('the mailbox changed while it was being read; run the command again');
+  error.changed = true;
+  return error;
+}
+
 // Asking Mail for one property of many messages is a single Apple event, while
 // walking messages one by one costs several events each.
 function summaries(specifier, mailboxName) {
@@ -225,7 +241,7 @@ function summaries(specifier, mailboxName) {
   const reads = specifier.readStatus();
   const flags = specifier.flaggedStatus();
   const lengths = [messageIds, subjects, senders, dates, reads, flags].map((values) => values.length);
-  if (lengths.some((length) => length !== ids.length)) throw new Error('the mailbox changed while it was being read; run the command again');
+  if (lengths.some((length) => length !== ids.length)) throw preludeChanged();
   return ids.map((id, position) => ({
     id: id,
     messageId: messageIds[position] || '',
@@ -249,11 +265,18 @@ function filtered(messages, conditions) {
   return messages.whose({ _and: conditions });
 }
 
-// Returns the newest `limit` messages matching the conditions. Every bulk property read
-// costs time in proportion to the rows it returns, so on a large mailbox it widens a
-// date window until the window holds enough matches instead of reading every match.
-function recent(messages, conditions, mailboxName, limit) {
-  if (limit > 0) {
+// The way of answering `matching` that has Mail do the filtering. A filtered property
+// read takes seconds on a large mailbox however few rows match, so it is kept only for
+// mailboxes that refuse a whole-mailbox read, and widens a date window until the window
+// holds enough matches instead of reading every match.
+function preludeFiltering(messages, criteria, mailboxName, limit) {
+  const conditions = [];
+  if (criteria.from) conditions.push({ sender: { _contains: criteria.from } });
+  if (criteria.subject) conditions.push({ subject: { _contains: criteria.subject } });
+  if (criteria.unread) conditions.push({ readStatus: false });
+  if (criteria.since) conditions.push({ dateReceived: { _greaterThan: criteria.since } });
+  if (criteria.text) conditions.push({ _or: [{ subject: { _contains: criteria.text } }, { sender: { _contains: criteria.text } }] });
+  if (limit > 0 && !criteria.since) {
     for (const days of preludeWindows) {
       const since = new Date(Date.now() - days * preludeDay);
       const rows = summaries(filtered(messages, conditions.concat([{ dateReceived: { _greaterThan: since } }])), mailboxName);
@@ -261,4 +284,96 @@ function recent(messages, conditions, mailboxName, limit) {
     }
   }
   return newest(summaries(filtered(messages, conditions), mailboxName), limit);
+}
+
+// Reads one property of every message of the mailbox, once.
+function preludeColumn(table, property) {
+  if (!(property in table.columns)) {
+    const values = table.messages[property]();
+    if (values.length !== table.ids.length) throw preludeChanged();
+    table.columns[property] = values;
+  }
+  return table.columns[property];
+}
+
+// Reads only the properties the criteria test, for the whole mailbox, and returns the
+// positions of the messages that match, newest first.
+function preludeScan(messages, criteria) {
+  const table = { messages: messages, ids: [], columns: {}, positions: [] };
+  try {
+    table.ids = messages.id() || [];
+  } catch (error) {
+    if (error.errorNumber === preludeMissing) return table;
+    throw error;
+  }
+  let positions = table.ids.map((id, position) => position);
+  const keep = (properties, test) => {
+    if (positions.length === 0) return;
+    const columns = properties.map((property) => preludeColumn(table, property));
+    positions = positions.filter((position) => columns.some((values) => test(values[position])));
+  };
+  if (criteria.unread) keep(['readStatus'], (read) => read === false);
+  if (criteria.since) keep(['dateReceived'], (date) => Boolean(date) && date > criteria.since);
+  const containing = (wanted) => {
+    const lowered = wanted.toLowerCase();
+    return (value) => String(value || '').toLowerCase().indexOf(lowered) >= 0;
+  };
+  if (criteria.from) keep(['sender'], containing(criteria.from));
+  if (criteria.subject) keep(['subject'], containing(criteria.subject));
+  if (criteria.text) keep(['subject', 'sender'], containing(criteria.text));
+  if (positions.length > 1) {
+    const dates = preludeColumn(table, 'dateReceived').map((date) => preludeDate(date) || '');
+    positions.sort((left, right) => dates[right].localeCompare(dates[left]));
+  }
+  table.positions = positions;
+  return table;
+}
+
+// Builds the rows for the chosen positions. A property the scan did not read is read
+// for the whole mailbox when enough rows are wanted to make that the cheaper way, and
+// message by message otherwise.
+function preludeRows(table, positions, mailboxName) {
+  for (const property of preludeFields) {
+    const advantage = property === 'messageId' ? preludeMessageIdAdvantage : preludeBulkAdvantage;
+    if (positions.length * advantage >= table.ids.length) preludeColumn(table, property);
+  }
+  return positions.map((position) => {
+    const id = table.ids[position];
+    const message = table.messages.byId(id);
+    const value = (property) => {
+      if (property in table.columns) return table.columns[property][position];
+      return preludeGuarded.indexOf(property) >= 0 ? optional(() => message[property]()) : message[property]();
+    };
+    try {
+      return {
+        id: id,
+        messageId: value('messageId') || '',
+        mailbox: mailboxName || '',
+        subject: value('subject') || '',
+        sender: value('sender') || '',
+        received: preludeDate(value('dateReceived')),
+        read: value('readStatus'),
+        flagged: value('flaggedStatus'),
+      };
+    } catch (error) {
+      if (preludeStale(error)) throw preludeChanged();
+      throw error;
+    }
+  });
+}
+
+// Returns the newest `limit` messages (all of them for 0) that match the criteria:
+// unread, since (a Date), and from, subject and text, which match without regard to
+// case. Reading a property of every message of a mailbox is far cheaper than having
+// Mail filter first, so the filtering and sorting happen here and the remaining
+// properties are read only for the rows returned.
+function matching(messages, criteria, mailboxName, limit) {
+  try {
+    const table = preludeScan(messages, criteria);
+    const positions = limit > 0 ? table.positions.slice(0, limit) : table.positions;
+    return preludeRows(table, positions, mailboxName);
+  } catch (error) {
+    if (error.changed || error.errorNumber === preludeNotPermitted || error.errorNumber === preludeTimedOut) throw error;
+    return preludeFiltering(messages, criteria, mailboxName, limit);
+  }
 }
