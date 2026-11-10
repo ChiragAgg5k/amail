@@ -15,7 +15,11 @@ const (
 
 // Draft is a message to compose. Unless Send is set it opens in Mail for review.
 type Draft struct {
-	Account     string   `json:"account"`
+	Account string `json:"account"`
+	// From is the sender address; empty means the account's default. It must belong to the account.
+	From string `json:"from"`
+	// Signature is the name of a Mail signature to append; empty means none.
+	Signature   string   `json:"signature"`
 	To          []string `json:"to"`
 	Cc          []string `json:"cc"`
 	Bcc         []string `json:"bcc"`
@@ -38,7 +42,7 @@ func (client Client) Compose(ctx context.Context, draft Draft) (Delivery, error)
 	draft.Bcc = present(draft.Bcc)
 	draft.Attachments = present(draft.Attachments)
 	var delivery Delivery
-	err := client.run(ctx, "compose", draft, &delivery)
+	err := client.run(ctx, composeScript, Target{}, draft, &delivery)
 	return delivery, err
 }
 

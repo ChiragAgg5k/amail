@@ -1,0 +1,125 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"strconv"
+
+	"github.com/spf13/cobra"
+
+	"github.com/ChiragAgg5k/mailslot/internal/mail"
+)
+
+const (
+	dryRunNotice = "Dry run; nothing changed."
+	unknownID    = "unknown"
+)
+
+// change is one row of a triage command's report.
+type change struct {
+	ID        int    `json:"id"`
+	MessageID string `json:"messageId"`
+	Mailbox   string `json:"mailbox"`
+	Subject   string `json:"subject"`
+	Change    string `json:"change"`
+	// NewID is the id after a move; 0 when Mail has not assigned it yet, absent for changes that do not move.
+	NewID  *int `json:"newId,omitempty"`
+	DryRun bool `json:"dryRun"`
+}
+
+// action changes one resolved message and returns it as it is afterwards.
+type action func(ctx context.Context, target mail.Target) (mail.Summary, error)
+
+// apply runs a triage change over message references. Every reference is resolved before anything
+// changes, so a bad reference changes nothing; after that, a failure reports the rows already changed.
+func (app *application) apply(command *cobra.Command, references []string, dryRun bool, describe string, act action, moves bool) error {
+	ctx := command.Context()
+	parsed := make([]mail.Reference, 0, len(references))
+	for _, value := range references {
+		reference, err := mail.ParseReference(value)
+		if err != nil {
+			return err
+		}
+		parsed = append(parsed, reference)
+	}
+	account, err := app.resolve(ctx)
+	if err != nil {
+		return err
+	}
+
+	targets := make([]mail.Target, 0, len(parsed))
+	rows := make([]change, 0, len(parsed))
+	for _, reference := range parsed {
+		target := locate(command, account, reference)
+		found, err := app.backend.Resolve(ctx, target)
+		if err != nil {
+			return err
+		}
+		if found.Mailbox != "" {
+			target.Mailbox = found.Mailbox
+		}
+		target.ID = found.ID
+		if found.MessageID != "" {
+			target.MessageID = found.MessageID
+		}
+		targets = append(targets, target)
+		rows = append(rows, change{
+			ID:        found.ID,
+			MessageID: target.MessageID,
+			Mailbox:   target.Mailbox,
+			Subject:   found.Subject,
+			Change:    describe,
+			DryRun:    dryRun,
+		})
+	}
+
+	output := command.OutOrStdout()
+	if dryRun {
+		return app.changed(output, rows, true)
+	}
+	for index, target := range targets {
+		after, err := act(ctx, target)
+		if err != nil {
+			if printed := app.changed(output, rows[:index], false); printed != nil {
+				return printed
+			}
+			return err
+		}
+		if moves {
+			id := after.ID
+			rows[index].NewID = &id
+		}
+	}
+	return app.changed(output, rows, false)
+}
+
+func (app *application) changed(output io.Writer, rows []change, dryRun bool) error {
+	return app.print(output, rows, func(output io.Writer) {
+		if dryRun {
+			fmt.Fprintln(output, dryRunNotice)
+		}
+		if len(rows) == 0 {
+			return
+		}
+		columns(output, "ID\tMESSAGE-ID\tCHANGE\tNEW ID\tSUBJECT", func(writer io.Writer) {
+			for _, row := range rows {
+				fmt.Fprintf(writer, "%d\t%s\t%s\t%s\t%s\n", row.ID, row.MessageID, row.Change, newID(row.NewID), row.Subject)
+			}
+		})
+	})
+}
+
+func newID(id *int) string {
+	switch {
+	case id == nil:
+		return ""
+	case *id == 0:
+		return unknownID
+	}
+	return strconv.Itoa(*id)
+}
+
+func dryRunFlag(command *cobra.Command, target *bool) {
+	command.Flags().BoolVar(target, dryRunName, false, "show what would change without changing anything")
+}

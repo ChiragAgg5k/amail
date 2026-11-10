@@ -8,15 +8,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ChiragAgg5k/mailslot/internal/config"
+	"github.com/ChiragAgg5k/mailslot/internal/failure"
 )
 
-func (app *application) accounts() *cobra.Command {
+func (app *application) accountsCommand() *cobra.Command {
 	command := &cobra.Command{
 		Use:   "accounts",
 		Short: "List the accounts configured in Mail",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
-			accounts, err := app.client.Accounts(command.Context())
+			accounts, err := app.accounts(command.Context())
 			if err != nil {
 				return err
 			}
@@ -41,11 +42,11 @@ func (app *application) accounts() *cobra.Command {
 			}
 			stored, err := config.Load()
 			if err != nil {
-				return fmt.Errorf("read configuration: %w", err)
+				return failure.Wrap(failure.General, fmt.Errorf("read configuration: %w", err), "")
 			}
 			stored.Account = account.Name
 			if err := stored.Save(); err != nil {
-				return fmt.Errorf("write configuration: %w", err)
+				return failure.Wrap(failure.General, fmt.Errorf("write configuration: %w", err), "")
 			}
 			fmt.Fprintf(command.OutOrStdout(), "Default account is now %s.\n", account.Name)
 			return nil

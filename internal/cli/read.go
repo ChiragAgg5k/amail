@@ -3,12 +3,9 @@ package cli
 import (
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
-
-	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
 func (app *application) read() *cobra.Command {
@@ -18,7 +15,11 @@ func (app *application) read() *cobra.Command {
 		Short: "Show one message in full",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
-			message, err := app.fetch(command, mailbox, arguments[0])
+			_, target, err := app.target(command, arguments[0])
+			if err != nil {
+				return err
+			}
+			message, err := app.backend.Read(command.Context(), target)
 			if err != nil {
 				return err
 			}
@@ -43,16 +44,4 @@ func (app *application) read() *cobra.Command {
 	}
 	mailboxFlag(command, &mailbox)
 	return command
-}
-
-func (app *application) fetch(command *cobra.Command, mailbox string, identifier string) (mail.Message, error) {
-	id, err := strconv.Atoi(identifier)
-	if err != nil {
-		return mail.Message{}, notIdentifier(identifier)
-	}
-	_, location, err := app.locate(command.Context(), mailbox)
-	if err != nil {
-		return mail.Message{}, err
-	}
-	return app.client.Read(command.Context(), location, id)
 }

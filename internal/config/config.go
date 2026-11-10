@@ -20,6 +20,10 @@ const (
 type Config struct {
 	// Account is the Mail account used when none is named on the command line.
 	Account string `toml:"account"`
+	// ReadOnly makes every command that would change Mail refuse.
+	ReadOnly bool `toml:"read_only,omitempty"`
+	// Send set to false makes --send refuse; unset means sending is allowed.
+	Send *bool `toml:"send,omitempty"`
 }
 
 // Path returns where the configuration file lives.

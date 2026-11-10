@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/ChiragAgg5k/mailslot/internal/failure"
 	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
@@ -28,19 +28,19 @@ func (app *application) search() *cobra.Command {
 			if since != "" {
 				moment, err := time.ParseInLocation(dateLayout, since, time.Local)
 				if err != nil {
-					return fmt.Errorf("--since wants a date such as %s", dateLayout)
+					return failure.New(failure.Usage, fmt.Sprintf("--since wants a date such as %s", dateLayout), "")
 				}
 				query.Since = &moment
 			}
 			if query.Text == "" && query.From == "" && query.Subject == "" && !query.Unread && query.Since == nil {
-				return errors.New("give some text or at least one of --from, --subject, --since, --unread")
+				return failure.New(failure.Usage, "give some text or at least one of --from, --subject, --since, --unread", "")
 			}
-			_, location, err := app.locate(command.Context(), mailbox)
+			account, err := app.resolve(command.Context())
 			if err != nil {
 				return err
 			}
-			query.Location = location
-			rows, err := app.client.Search(command.Context(), query)
+			query.Location = mail.Location{Account: account.Name, Mailbox: mailbox}
+			rows, err := app.backend.Search(command.Context(), query)
 			if err != nil {
 				return err
 			}

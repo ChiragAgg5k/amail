@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"strconv"
-
 	"github.com/spf13/cobra"
 )
 
@@ -24,15 +22,14 @@ func (app *application) reply() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			id, err := strconv.Atoi(arguments[0])
-			if err != nil {
-				return notIdentifier(arguments[0])
-			}
-			account, location, err := app.locate(command.Context(), mailbox)
+			account, target, err := app.target(command, arguments[0])
 			if err != nil {
 				return err
 			}
-			original, err := app.client.Read(command.Context(), location, id)
+			if err := outgoing(account); err != nil {
+				return err
+			}
+			original, err := app.backend.Read(command.Context(), target)
 			if err != nil {
 				return err
 			}
@@ -46,5 +43,5 @@ func (app *application) reply() *cobra.Command {
 	mailboxFlag(command, &mailbox)
 	command.Flags().BoolVar(&everyone, "all", false, "copy the other recipients of the original")
 	composition.flags(command)
-	return command
+	return changing(command)
 }

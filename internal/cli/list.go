@@ -4,6 +4,8 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
+
+	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
 const defaultLimit = 20
@@ -17,11 +19,12 @@ func (app *application) list() *cobra.Command {
 		Short: "Show the newest messages of a mailbox",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
-			_, location, err := app.locate(command.Context(), mailbox)
+			account, err := app.resolve(command.Context())
 			if err != nil {
 				return err
 			}
-			rows, err := app.client.List(command.Context(), location, limit, unread)
+			location := mail.Location{Account: account.Name, Mailbox: mailbox}
+			rows, err := app.backend.List(command.Context(), location, limit, unread)
 			if err != nil {
 				return err
 			}

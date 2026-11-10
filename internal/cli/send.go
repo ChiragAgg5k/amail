@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/ChiragAgg5k/mailslot/internal/failure"
 	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
@@ -26,7 +26,7 @@ func (composition *composition) flags(command *cobra.Command) {
 	command.Flags().StringVar(&composition.body, "body", "", "message text")
 	command.Flags().StringVar(&composition.bodyFile, "body-file", "", "file holding the message text (- for standard input)")
 	command.Flags().StringArrayVar(&composition.attachments, "attach", nil, "file to attach (repeatable)")
-	command.Flags().BoolVar(&composition.deliver, "send", false, "send immediately instead of opening a draft in Mail")
+	command.Flags().BoolVar(&composition.deliver, sendName, false, "send immediately instead of opening a draft in Mail")
 	command.MarkFlagsMutuallyExclusive("body", "body-file")
 }
 
@@ -34,7 +34,7 @@ func (composition *composition) text(input io.Reader) (string, error) {
 	switch composition.bodyFile {
 	case "":
 		if composition.body == "" {
-			return "", errors.New("give the message text with --body or --body-file")
+			return "", failure.New(failure.Usage, "give the message text with --body or --body-file", "")
 		}
 		return composition.body, nil
 	case standardInput:
@@ -54,18 +54,26 @@ func (composition *composition) files() ([]string, error) {
 		}
 		details, err := os.Stat(path)
 		if err != nil {
-			return nil, fmt.Errorf("attachment: %w", err)
+			return nil, failure.Wrap(failure.Usage, fmt.Errorf("attachment: %w", err), "")
 		}
 		if details.IsDir() {
-			return nil, fmt.Errorf("attachment %s is a directory", attachment)
+			return nil, failure.New(failure.Usage, fmt.Sprintf("attachment %s is a directory", attachment), "")
 		}
 		paths = append(paths, path)
 	}
 	return paths, nil
 }
 
+// outgoing refuses the local pseudo-account, which has no server to send through.
+func outgoing(account mail.Account) error {
+	if account.Name == mail.Local {
+		return failure.New(failure.Usage, "local mailboxes cannot send mail; pick an account with --account", "")
+	}
+	return nil
+}
+
 func (app *application) compose(command *cobra.Command, draft mail.Draft) error {
-	delivery, err := app.client.Compose(command.Context(), draft)
+	delivery, err := app.backend.Compose(command.Context(), draft)
 	if err != nil {
 		return err
 	}
@@ -99,6 +107,9 @@ func (app *application) send() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := outgoing(account); err != nil {
+				return err
+			}
 			draft.Account = account.Name
 			draft.Body = body
 			draft.Attachments = files
@@ -113,5 +124,5 @@ func (app *application) send() *cobra.Command {
 	_ = command.MarkFlagRequired("to")
 	_ = command.MarkFlagRequired("subject")
 	composition.flags(command)
-	return command
+	return changing(command)
 }
