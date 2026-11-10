@@ -30,6 +30,8 @@ const (
 	argumentsEnd     = "--"
 	changesMail      = "mailslot.changesMail"
 	annotationMarker = "true"
+	// boolType is what pflag reports as the type of a boolean flag.
+	boolType = "bool"
 )
 
 type application struct {
@@ -179,7 +181,7 @@ func alters(command *cobra.Command) bool {
 
 func enabled(command *cobra.Command, name string) bool {
 	flag := command.Flags().Lookup(name)
-	return flag != nil && flag.Value.Type() == "bool" && flag.Value.String() == strconv.FormatBool(true)
+	return flag != nil && flag.Value.Type() == boolType && flag.Value.String() == strconv.FormatBool(true)
 }
 
 // classify makes any untyped error raised before a command started running a usage error.

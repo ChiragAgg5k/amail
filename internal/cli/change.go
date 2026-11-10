@@ -31,9 +31,19 @@ type change struct {
 // action changes one resolved message and returns it as it is afterwards.
 type action func(ctx context.Context, target mail.Target) (mail.Summary, error)
 
-// apply runs a triage change over message references. Every reference is resolved before anything
-// changes, so a bad reference changes nothing; after that, a failure reports the rows already changed.
-func (app *application) apply(command *cobra.Command, references []string, dryRun bool, describe string, act action, moves bool) error {
+// guard refuses a resolved message before anything changes; a nil guard accepts every message.
+type guard func(target mail.Target) error
+
+// resolved identifies one message after its reference is resolved, so two references to it collapse.
+type resolved struct {
+	mailbox string
+	id      int
+}
+
+// apply runs a triage change over message references. Every reference is resolved and guarded before
+// anything changes, so a bad or refused reference changes nothing; references to the same message
+// count once. After that, a failure reports the rows already changed.
+func (app *application) apply(command *cobra.Command, references []string, dryRun bool, describe string, act action, moves bool, refuse guard) error {
 	ctx := command.Context()
 	parsed := make([]mail.Reference, 0, len(references))
 	for _, value := range references {
@@ -50,6 +60,7 @@ func (app *application) apply(command *cobra.Command, references []string, dryRu
 
 	targets := make([]mail.Target, 0, len(parsed))
 	rows := make([]change, 0, len(parsed))
+	seen := make(map[resolved]struct{}, len(parsed))
 	for _, reference := range parsed {
 		target := locate(command, account, reference)
 		found, err := app.backend.Resolve(ctx, target)
@@ -62,6 +73,16 @@ func (app *application) apply(command *cobra.Command, references []string, dryRu
 		target.ID = found.ID
 		if found.MessageID != "" {
 			target.MessageID = found.MessageID
+		}
+		key := resolved{mailbox: target.Mailbox, id: target.ID}
+		if _, duplicate := seen[key]; duplicate {
+			continue
+		}
+		seen[key] = struct{}{}
+		if refuse != nil {
+			if err := refuse(target); err != nil {
+				return err
+			}
 		}
 		targets = append(targets, target)
 		rows = append(rows, change{

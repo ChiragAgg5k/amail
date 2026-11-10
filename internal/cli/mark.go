@@ -31,7 +31,7 @@ func (app *application) mark() *cobra.Command {
 			}
 			return app.apply(command, references, dryRun, describe, func(ctx context.Context, target mail.Target) (mail.Summary, error) {
 				return app.backend.Mark(ctx, target, read)
-			}, false)
+			}, false, nil)
 		},
 	}
 	mailboxFlag(command, &mailbox)

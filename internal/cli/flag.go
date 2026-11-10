@@ -37,7 +37,7 @@ func (app *application) flag() *cobra.Command {
 			}
 			return app.apply(command, references, dryRun, describe, func(ctx context.Context, target mail.Target) (mail.Summary, error) {
 				return app.backend.Flag(ctx, target, color)
-			}, false)
+			}, false, nil)
 		},
 	}
 	mailboxFlag(command, &mailbox)

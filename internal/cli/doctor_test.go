@@ -1,10 +1,15 @@
 package cli_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/ChiragAgg5k/mailslot/internal/lock"
+	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
 const doctorFault = "MAILSLOT_FIXTURE_FAULT"
@@ -88,6 +93,26 @@ func TestDoctorTimeout(t *testing.T) {
 	checks := doctorChecks(t, setup{Environment: map[string]string{doctorFault: "timeout"}}, 5)
 	if automation := checks["automation"]; automation.Status != "fail" || !strings.Contains(automation.Hint, "permission prompt") {
 		t.Fatalf("automation check %+v", automation)
+	}
+}
+
+func TestDoctorLockHeld(t *testing.T) {
+	prepare(t, setup{})
+	path, err := mail.LockPath()
+	if err != nil {
+		t.Fatalf("lock path: %v", err)
+	}
+	held, err := lock.Acquire(context.Background(), path, time.Second)
+	if err != nil {
+		t.Fatalf("hold lock: %v", err)
+	}
+	defer held.Release()
+	checks := doctorChecks(t, setup{Environment: map[string]string{lockVariable: "150ms"}}, 5)
+	if mailCheck := checks["mail"]; mailCheck.Status != "fail" || !strings.Contains(mailCheck.Detail, "another mailslot command") {
+		t.Fatalf("mail check %+v", mailCheck)
+	}
+	if automation := checks["automation"]; automation.Status != "skip" || !strings.Contains(automation.Detail, "holds the lock") {
+		t.Fatalf("automation check %+v, want skipped while the lock is held", automation)
 	}
 }
 
