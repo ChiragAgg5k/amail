@@ -1,4 +1,4 @@
-module github.com/ChiragAgg5k/amail
+module github.com/ChiragAgg5k/mailslot
 
 go 1.25.0
 

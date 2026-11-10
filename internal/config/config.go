@@ -1,4 +1,4 @@
-// Package config stores the user's amail preferences.
+// Package config stores the user's mailslot preferences.
 package config
 
 import (
@@ -12,7 +12,7 @@ import (
 
 const (
 	directoryVariable = "XDG_CONFIG_HOME"
-	directoryName     = "amail"
+	directoryName     = "mailslot"
 	fileName          = "config.toml"
 )
 

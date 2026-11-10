@@ -1,4 +1,4 @@
-// Package cli defines the amail command line.
+// Package cli defines the mailslot command line.
 package cli
 
 import (
@@ -11,12 +11,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ChiragAgg5k/amail/internal/config"
-	"github.com/ChiragAgg5k/amail/internal/mail"
+	"github.com/ChiragAgg5k/mailslot/internal/config"
+	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
 const (
-	accountVariable = "AMAIL_ACCOUNT"
+	accountVariable = "MAILSLOT_ACCOUNT"
 	supportedSystem = "darwin"
 )
 
@@ -30,9 +30,9 @@ type application struct {
 func Execute(version string) int {
 	app := &application{}
 	root := &cobra.Command{
-		Use:           "amail",
+		Use:           "mailslot",
 		Short:         "Apple Mail from the terminal",
-		Long:          "amail reads, searches and writes mail through the Apple Mail app, so it works with any account Mail can sign in to.",
+		Long:          "mailslot reads, searches and writes mail through the Apple Mail app, so it works with any account Mail can sign in to.",
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -51,12 +51,12 @@ func Execute(version string) int {
 	)
 	root.PersistentPreRunE = func(*cobra.Command, []string) error {
 		if runtime.GOOS != supportedSystem {
-			return errors.New("amail drives the Apple Mail app, so it only runs on macOS")
+			return errors.New("mailslot drives the Apple Mail app, so it only runs on macOS")
 		}
 		return nil
 	}
 	if err := root.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "amail:", err)
+		fmt.Fprintln(os.Stderr, "mailslot:", err)
 		return 1
 	}
 	return 0
@@ -103,7 +103,7 @@ func (app *application) resolve(ctx context.Context) (mail.Account, error) {
 			}
 		}
 	}
-	return mail.Account{}, fmt.Errorf("several accounts are available (%s); pick one with --account or `amail accounts use <name>`", strings.Join(names, ", "))
+	return mail.Account{}, fmt.Errorf("several accounts are available (%s); pick one with --account or `mailslot accounts use <name>`", strings.Join(names, ", "))
 }
 
 func (app *application) locate(ctx context.Context, mailbox string) (mail.Account, mail.Location, error) {

@@ -1,6 +1,6 @@
 version: 2
 
-project_name: amail
+project_name: mailslot
 
 builds:
   - env:

@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ChiragAgg5k/amail/internal/mail"
+	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
 const standardInput = "-"

@@ -1,4 +1,4 @@
-# amail
+# mailslot
 
 A command line tool that reads and writes mail by asking the Apple Mail app, for accounts that other terminal mail tools cannot sign in to.
 

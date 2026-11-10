@@ -9,7 +9,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/ChiragAgg5k/amail/internal/mail"
+	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
 const (
