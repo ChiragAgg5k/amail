@@ -9,6 +9,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/ChiragAgg5k/mailslot/internal/failure"
 	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
@@ -41,7 +42,18 @@ func summaries(output io.Writer, rows []mail.Summary) {
 		fmt.Fprintln(output, "No messages.")
 		return
 	}
-	columns(output, "ID\t\tRECEIVED\tFROM\tSUBJECT", func(writer io.Writer) {
+	spread := false
+	for _, row := range rows {
+		if row.Mailbox != rows[0].Mailbox {
+			spread = true
+			break
+		}
+	}
+	header := "ID\t\tRECEIVED\tFROM\tSUBJECT"
+	if spread {
+		header = "ID\t\tRECEIVED\tMAILBOX\tFROM\tSUBJECT"
+	}
+	columns(output, header, func(writer io.Writer) {
 		for _, row := range rows {
 			marks := ""
 			if !row.Read {
@@ -50,9 +62,36 @@ func summaries(output io.Writer, rows []mail.Summary) {
 			if row.Flagged {
 				marks += flagMark
 			}
+			if spread {
+				fmt.Fprintf(writer, "%d\t%s\t%s\t%s\t%s\t%s\n", row.ID, marks, local(row.Received), row.Mailbox, display(row.Sender), row.Subject)
+				continue
+			}
 			fmt.Fprintf(writer, "%d\t%s\t%s\t%s\t%s\n", row.ID, marks, local(row.Received), display(row.Sender), row.Subject)
 		}
 	})
+}
+
+// problem is the JSON form of an error.
+type problem struct {
+	Error string       `json:"error"`
+	Code  failure.Code `json:"code"`
+	Hint  string       `json:"hint"`
+}
+
+// report writes an error to standard error, as JSON when asked for.
+func report(output io.Writer, err error, asJSON bool) {
+	hint := failure.HintOf(err)
+	if asJSON {
+		encoder := json.NewEncoder(output)
+		encoder.SetEscapeHTML(false)
+		if encoder.Encode(problem{Error: err.Error(), Code: failure.CodeOf(err), Hint: hint}) == nil {
+			return
+		}
+	}
+	fmt.Fprintln(output, "mailslot:", err)
+	if hint != "" {
+		fmt.Fprintln(output, "hint:", hint)
+	}
 }
 
 func local(moment *time.Time) string {

@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1100,
+    "messageId": "verify-1100@auth.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Your verification code",
+    "sender": "Example Sign-in <no-reply@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-20T09:00:00Z",
+    "received": "2026-10-20T09:00:05Z",
+    "read": false,
+    "flag": -1,
+    "content": "Your code is 482913. It expires in 10 minutes.",
+    "attachments": []
+  },
+  {
+    "id": 1101,
+    "messageId": "lunch-1101@mail.example.org",
+    "account": "Personal",
+    "mailbox": "Inbox",
+    "subject": "Lunch tomorrow?",
+    "sender": "Tomasz Ebner <tomasz.ebner@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-20T10:30:00Z",
+    "received": "2026-10-20T10:30:10Z",
+    "read": false,
+    "flag": -1,
+    "content": "Free for lunch tomorrow around 12:30?\n\nTomasz",
+    "attachments": []
+  }
+]

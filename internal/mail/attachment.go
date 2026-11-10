@@ -16,11 +16,11 @@ type SavedAttachment struct {
 }
 
 // SaveAttachments writes every attachment of a message into a directory.
-func (client Client) SaveAttachments(ctx context.Context, location Location, id int, directory string) ([]SavedAttachment, error) {
+func (client Client) SaveAttachments(ctx context.Context, target Target, directory string) ([]SavedAttachment, error) {
 	var saved []SavedAttachment
-	err := client.run(ctx, "attachments", struct {
-		reference
+	err := client.run(ctx, attachmentsScript, target, struct {
+		Target
 		Directory string `json:"directory"`
-	}{reference{Location: location, ID: id}, directory}, &saved)
+	}{target, directory}, &saved)
 	return saved, err
 }

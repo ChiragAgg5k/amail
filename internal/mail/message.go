@@ -7,12 +7,14 @@ import (
 
 // Summary is one row of a message listing.
 type Summary struct {
-	ID       int        `json:"id"`
-	Subject  string     `json:"subject"`
-	Sender   string     `json:"sender"`
-	Received *time.Time `json:"received"`
-	Read     bool       `json:"read"`
-	Flagged  bool       `json:"flagged"`
+	ID        int        `json:"id"`
+	MessageID string     `json:"messageId"`
+	Mailbox   string     `json:"mailbox"`
+	Subject   string     `json:"subject"`
+	Sender    string     `json:"sender"`
+	Received  *time.Time `json:"received"`
+	Read      bool       `json:"read"`
+	Flagged   bool       `json:"flagged"`
 }
 
 // Address is a named mail recipient.
@@ -25,6 +27,7 @@ type Address struct {
 type Message struct {
 	ID          int          `json:"id"`
 	MessageID   string       `json:"messageId"`
+	Mailbox     string       `json:"mailbox"`
 	Subject     string       `json:"subject"`
 	Sender      string       `json:"sender"`
 	ReplyTo     string       `json:"replyTo"`
@@ -47,6 +50,8 @@ type Query struct {
 	Unread  bool       `json:"unread"`
 	Since   *time.Time `json:"since"`
 	Limit   int        `json:"limit"`
+	// Body extends the text match to message bodies, which is slow on large mailboxes.
+	Body bool `json:"body"`
 }
 
 type listing struct {
@@ -55,28 +60,23 @@ type listing struct {
 	Limit  int  `json:"limit"`
 }
 
-type reference struct {
-	Location
-	ID int `json:"id"`
-}
-
 // List returns the newest messages of a mailbox.
 func (client Client) List(ctx context.Context, location Location, limit int, unread bool) ([]Summary, error) {
 	var summaries []Summary
-	err := client.run(ctx, "list", listing{Location: location, Unread: unread, Limit: limit}, &summaries)
+	err := client.run(ctx, listScript, Target{}, listing{Location: location, Unread: unread, Limit: limit}, &summaries)
 	return summaries, err
 }
 
 // Search returns the messages of a mailbox that match the query, newest first.
 func (client Client) Search(ctx context.Context, query Query) ([]Summary, error) {
 	var summaries []Summary
-	err := client.run(ctx, "search", query, &summaries)
+	err := client.run(ctx, searchScript, Target{}, query, &summaries)
 	return summaries, err
 }
 
-// Read returns one message by its Mail identifier.
-func (client Client) Read(ctx context.Context, location Location, id int) (Message, error) {
+// Read returns one message in full.
+func (client Client) Read(ctx context.Context, target Target) (Message, error) {
 	var message Message
-	err := client.run(ctx, "read", reference{Location: location, ID: id}, &message)
+	err := client.run(ctx, readScript, target, target, &message)
 	return message, err
 }

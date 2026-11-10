@@ -8,15 +8,13 @@ function unused(name, taken) {
   return stem + '-' + copy + extension;
 }
 
-function run(argv) {
-  const request = JSON.parse(argv[0]);
+function main(request) {
   const taken = new Set();
-  const saved = findMessage(request).mailAttachments().map((attachment) => {
+  return findMessage(request).message.mailAttachments().map((attachment) => {
     const name = unused(attachment.name(), taken);
     taken.add(name);
     const path = request.directory + '/' + name;
     Mail.save(attachment, { in: Path(path) });
     return { name: name, path: path };
   });
-  return JSON.stringify(saved);
 }

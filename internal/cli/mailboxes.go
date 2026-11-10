@@ -17,7 +17,7 @@ func (app *application) mailboxes() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			mailboxes, err := app.client.Mailboxes(command.Context(), account.Name)
+			mailboxes, err := app.backend.Mailboxes(command.Context(), account.Name)
 			if err != nil {
 				return err
 			}

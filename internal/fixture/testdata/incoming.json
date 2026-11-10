@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1100,
+    "messageId": "code@example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Your verification code",
+    "sender": "Example Sign-in <no-reply@example.com>",
+    "replyTo": "",
+    "to": [{"name": "", "address": "alex@example.com"}],
+    "cc": [],
+    "sent": "2026-03-05T09:00:00Z",
+    "received": "2026-03-05T09:00:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Your code is 482913."
+  }
+]

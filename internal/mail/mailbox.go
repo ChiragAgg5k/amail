@@ -12,7 +12,7 @@ type Mailbox struct {
 	Messages int    `json:"messages"`
 }
 
-// Location points at one mailbox of one account.
+// Location points at one mailbox of one account. An empty mailbox means every mailbox of the account, Inbox first.
 type Location struct {
 	Account string `json:"account"`
 	Mailbox string `json:"mailbox"`
@@ -21,7 +21,7 @@ type Location struct {
 // Mailboxes lists the mailboxes of an account.
 func (client Client) Mailboxes(ctx context.Context, account string) ([]Mailbox, error) {
 	var mailboxes []Mailbox
-	err := client.run(ctx, "mailboxes", struct {
+	err := client.run(ctx, mailboxesScript, Target{}, struct {
 		Account string `json:"account"`
 	}{account}, &mailboxes)
 	return mailboxes, err

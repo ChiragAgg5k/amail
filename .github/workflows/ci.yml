@@ -22,3 +22,168 @@ jobs:
         run: go vet ./...
       - name: Build
         run: go build ./...
+      - name: Test
+        run: go test ./...
+
+  # Drives the real Mail app on a hosted runner, which has no accounts: local "On My Mac" mailboxes hold an imported fixture.
+  # Recipe and caveats: docs/research/ci-mail-trial.md on the research/ci-mail-trial branch.
+  # Never run these steps on a developer Mac: they write to the TCC database and to Mail.
+  e2e-local:
+    name: End-to-end against local mailboxes (hosted runner only, ${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      FIXTURE_MAILBOX: fixture
+      TARGET_MAILBOX: mailslot-target
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Helpers
+        run: |
+          E2E="$HOME/mailslot-e2e"
+          mkdir -p "$E2E/shots"
+          echo "E2E=$E2E" >> "$GITHUB_ENV"
+          # A missing Automation grant shows up as a hang, so every Apple event runs under a hard timeout (exit 142).
+          cat > "$E2E/lib.sh" <<'LIB'
+          limit() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+          LIB
+
+      # Must run before any Apple event reaches Mail: a consent prompt that times out leaves a deny row behind.
+      - name: Grant the runner agent Automation access to Mail
+        run: |
+          DB="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -ge 27 ]; then
+            DB=$(sudo lsof -c tccd -Fn | sed -n 's/^n//p' | grep '/ProtectedSystem/.*/com\.apple\.TCC/TCC\.db$' | sort -u | head -1)
+          fi
+          # Clone the image's own Finder row for the agent so the insert follows whatever columns this image's access table has.
+          columns=$(sudo sqlite3 "$DB" "select group_concat(case name when 'indirect_object_identifier' then '''com.apple.mail''' when 'last_modified' then 'cast(strftime(''%s'', ''now'') as integer)' else '\"' || name || '\"' end, ', ') from pragma_table_info('access')")
+          seeded=false
+          for attempt in 1 2 3 4 5; do
+            if sudo sqlite3 -cmd '.timeout 10000' "$DB" "insert or replace into access select $columns from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.finder' and client = '/opt/hca/hosted-compute-agent'"; then
+              seeded=true
+              break
+            fi
+            echo "TCC insert failed (attempt $attempt)"
+            sleep $((attempt * 2))
+          done
+          if [ "$seeded" != true ]; then
+            echo "::error::Could not insert the Automation row into $DB"
+            exit 1
+          fi
+          sudo killall tccd
+          sleep 2
+          rows=$(sudo sqlite3 "$DB" "select count(*) from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.mail' and client = '/opt/hca/hosted-compute-agent'")
+          echo "Automation rows for Mail: $rows"
+          if [ "$rows" -lt 1 ]; then
+            echo "::error::No Automation row for Mail after seeding; the image may lack the agent's Finder row"
+            exit 1
+          fi
+
+      # Mail shows an add-account sheet; leave it alone. Dismissing it (Escape) quits Mail.
+      - name: Launch Mail
+        run: |
+          open -g -a Mail
+          sleep 25
+
+      # version() is answered from the bundle without a grant, so accounts.length is the real health check.
+      - name: Check the Automation grant
+        run: |
+          source "$E2E/lib.sh"
+          if ! count=$(limit 60 osascript -l JavaScript -e "Application('Mail').accounts.length"); then
+            echo "::error::Automation grant not effective on this runner"
+            echo "Automation grant not effective on this runner"
+            exit 1
+          fi
+          echo "Mail answers; accounts: $count"
+
+      - name: Create local mailboxes
+        run: |
+          source "$E2E/lib.sh"
+          limit 60 osascript -l JavaScript -e '
+            function run(argv) {
+              const Mail = Application("Mail");
+              for (const name of argv) {
+                if (!Mail.mailboxes.name().includes(name)) Mail.mailboxes.push(Mail.Mailbox({ name: name }));
+              }
+              return Mail.mailboxes.name().join(", ");
+            }' "$TARGET_MAILBOX" Archive Trash
+
+      - name: Import the fixture mailbox
+        run: |
+          source "$E2E/lib.sh"
+          go run ./internal/fixture/mbox -fixture testdata/fixture -account local -mailbox Import/fixture -o "$E2E/fixture.mbox/mbox"
+          expected=$(grep -c '^From ' "$E2E/fixture.mbox/mbox")
+          echo "Messages in the mbox: $expected"
+          limit 120 osascript -l JavaScript -e '
+            function run(argv) {
+              return String(Application("Mail").importMailMailbox({ at: Path(argv[0]) }));
+            }' "$E2E/fixture.mbox"
+          # The import creates Import/fixture; Mail lists a nested mailbox both under its leaf name and inside its parent.
+          count=0
+          for second in $(seq 0 5 90); do
+            count=$(limit 30 osascript -l JavaScript -e '
+              function run(argv) {
+                const find = (boxes) => {
+                  for (const box of boxes) {
+                    if (box.name() === argv[0] && box.messages.length > 0) return box.messages.length;
+                    const nested = find(box.mailboxes());
+                    if (nested > 0) return nested;
+                  }
+                  return 0;
+                };
+                return find(Application("Mail").mailboxes());
+              }' "$FIXTURE_MAILBOX" || echo 0)
+            echo "After ${second}s: $count messages in $FIXTURE_MAILBOX"
+            [ "$count" -ge "$expected" ] && exit 0
+            sleep 5
+          done
+          echo "::error::Mailbox $FIXTURE_MAILBOX holds $count of $expected messages after 90 s"
+          exit 1
+
+      - name: Build mailslot
+        run: go build -o mailslot .
+
+      - name: Check mailslot sees the local mailboxes
+        run: |
+          source "$E2E/lib.sh"
+          listed=$(limit 120 ./mailslot mailboxes --account local --json)
+          names=$(printf '%s' "$listed" | jq -r '.[].name')
+          echo "Local mailboxes:"
+          echo "$names"
+          missing=0
+          for wanted in "$FIXTURE_MAILBOX" "$TARGET_MAILBOX" Trash; do
+            if ! printf '%s\n' "$names" | grep -qE "(^|/)${wanted}\$"; then
+              echo "::error::mailslot mailboxes --account local does not list $wanted"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: End-to-end tests
+        env:
+          CI: 'true'
+          MAILSLOT_E2E_ACCOUNT: local
+          MAILSLOT_E2E_MAILBOX: ${{ env.FIXTURE_MAILBOX }}
+          MAILSLOT_E2E_TARGET: ${{ env.TARGET_MAILBOX }}
+        run: go test -tags e2e ./internal/e2e/ -v -count=1 -timeout 15m
+
+      - name: Screenshot
+        if: failure()
+        run: |
+          source "$E2E/lib.sh"
+          limit 30 screencapture -x "$E2E/shots/failure.png" || echo "screencapture failed: $?"
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-local-${{ matrix.os }}
+          path: ~/mailslot-e2e/shots
+          if-no-files-found: warn
