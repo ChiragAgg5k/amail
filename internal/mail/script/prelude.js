@@ -3,6 +3,8 @@ const preludeMissing = -1728;
 const preludeInvalidIndex = -1719;
 const preludeLocal = 'local';
 const preludeInbox = 'inbox';
+const preludeDay = 86400000;
+const preludeWindows = [3, 14, 60, 365, 3650];
 
 function run(argv) {
   try {
@@ -121,19 +123,26 @@ function preludeWhere(account) {
   return account === preludeLocal ? 'local mailboxes (On My Mac)' : 'account "' + account + '"';
 }
 
-function findMailbox(request) {
+// Returns the named mailbox with its name spelled the way Mail spells it (INBOX, not
+// the requested Inbox), so every command reports the same name for the same mailbox.
+// A top-level match is taken as Mail lists it, without walking the whole tree.
+function locateMailbox(request) {
   const owner = container(request.account);
   const requested = request.mailbox || 'Inbox';
   const wanted = requested.toLowerCase();
   const direct = preludeNames(owner.mailboxes).find((candidate) => candidate.toLowerCase() === wanted);
-  if (direct !== undefined) return owner.mailboxes.byName(direct);
+  if (direct !== undefined) return { mailbox: owner.mailboxes.byName(direct), name: direct };
 
   const entries = preludeEntries(request.account);
   const entry =
     entries.find((candidate) => candidate.name.toLowerCase() === wanted) ||
     entries.find((candidate) => candidate.leaf.toLowerCase() === wanted);
   if (entry === undefined) throw missing('mailbox', 'no mailbox named "' + requested + '" in ' + preludeWhere(request.account));
-  return entry.mailbox;
+  return { mailbox: entry.mailbox, name: entry.name };
+}
+
+function findMailbox(request) {
+  return locateMailbox(request).mailbox;
 }
 
 function preludeStale(error) {
@@ -145,15 +154,15 @@ function preludeStale(error) {
 // one Apple event per mailbox and yields an empty array when nothing matches.
 function findMessage(request) {
   if (request.id > 0) {
-    const mailboxName = request.mailbox || 'Inbox';
-    const message = findMailbox({ account: request.account, mailbox: mailboxName }).messages.byId(request.id);
+    const located = locateMailbox({ account: request.account, mailbox: request.mailbox || 'Inbox' });
+    const message = located.mailbox.messages.byId(request.id);
     try {
       message.id();
     } catch (error) {
-      if (preludeStale(error)) throw missing('message', 'no message with id ' + request.id + ' in mailbox "' + mailboxName + '"');
+      if (preludeStale(error)) throw missing('message', 'no message with id ' + request.id + ' in mailbox "' + located.name + '"');
       throw error;
     }
-    return { message: message, mailbox: mailboxName };
+    return { message: message, mailbox: located.name };
   }
 
   const messageId = String(request.messageId || '').replace(/^<|>$/g, '');
@@ -161,7 +170,7 @@ function findMessage(request) {
 
   let candidates;
   if (request.mailbox) {
-    candidates = [{ mailbox: findMailbox(request), name: request.mailbox }];
+    candidates = [locateMailbox(request)];
   } else {
     const entries = preludeEntries(request.account);
     candidates = entries
@@ -238,4 +247,18 @@ function filtered(messages, conditions) {
   if (conditions.length === 0) return messages;
   if (conditions.length === 1) return messages.whose(conditions[0]);
   return messages.whose({ _and: conditions });
+}
+
+// Returns the newest `limit` messages matching the conditions. Every bulk property read
+// costs time in proportion to the rows it returns, so on a large mailbox it widens a
+// date window until the window holds enough matches instead of reading every match.
+function recent(messages, conditions, mailboxName, limit) {
+  if (limit > 0) {
+    for (const days of preludeWindows) {
+      const since = new Date(Date.now() - days * preludeDay);
+      const rows = summaries(filtered(messages, conditions.concat([{ dateReceived: { _greaterThan: since } }])), mailboxName);
+      if (rows.length >= limit) return newest(rows, limit);
+    }
+  }
+  return newest(summaries(filtered(messages, conditions), mailboxName), limit);
 }

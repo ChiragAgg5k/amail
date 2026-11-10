@@ -1,6 +1,7 @@
 function main(request) {
-  const mailboxName = request.mailbox || 'Inbox';
-  const messages = findMailbox({ account: request.account, mailbox: mailboxName }).messages;
+  const located = locateMailbox({ account: request.account, mailbox: request.mailbox || 'Inbox' });
+  const mailboxName = located.name;
+  const messages = located.mailbox.messages;
   const conditions = [];
   if (request.from) conditions.push({ sender: { _contains: request.from } });
   if (request.subject) conditions.push({ subject: { _contains: request.subject } });
@@ -9,7 +10,8 @@ function main(request) {
 
   if (!request.body || !request.text) {
     if (request.text) conditions.push({ _or: [{ subject: { _contains: request.text } }, { sender: { _contains: request.text } }] });
-    return newest(summaries(filtered(messages, conditions), mailboxName), request.limit);
+    if (request.since) return newest(summaries(filtered(messages, conditions), mailboxName), request.limit);
+    return recent(messages, conditions, mailboxName, request.limit);
   }
 
   // Mail cannot filter on body text, so each body costs its own content() read
