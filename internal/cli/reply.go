@@ -11,8 +11,9 @@ func (app *application) reply() *cobra.Command {
 	command := &cobra.Command{
 		Use:   "reply <id>",
 		Short: "Answer a message",
-		Long:  "Answer a message with the original quoted below your text. It opens as a draft in Mail unless --send is given.",
-		Args:  cobra.ExactArgs(1),
+		Long: "Answer a message with the original quoted below your text. It opens as a draft in Mail unless --send is given.\n\n" +
+			"The reply is a new message that threads by its Re: subject; it carries no In-Reply-To header.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
 			body, err := composition.text(command.InOrStdin())
 			if err != nil {
@@ -29,14 +30,16 @@ func (app *application) reply() *cobra.Command {
 			if err := outgoing(account); err != nil {
 				return err
 			}
+			if err := composition.sender(account); err != nil {
+				return err
+			}
 			original, err := app.backend.Read(command.Context(), target)
 			if err != nil {
 				return err
 			}
 			draft := original.Reply(body, everyone, account.Addresses)
-			draft.Account = account.Name
+			composition.sign(&draft, account)
 			draft.Attachments = files
-			draft.Send = composition.deliver
 			return app.compose(command, draft)
 		},
 	}
