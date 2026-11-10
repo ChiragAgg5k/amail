@@ -1,5 +1,5 @@
-// The sender is set to the request value as given, so a display name in
-// `Name <address>` survives; every comparison uses the bare address only.
+// The CLI passes --from as a bare address. Every comparison still uses the bare
+// address only, since Mail may report the sender with a display name.
 function main(request) {
   if (request.account === 'local') throw refuse('local mailboxes cannot send mail');
   const account = findAccount(request.account);

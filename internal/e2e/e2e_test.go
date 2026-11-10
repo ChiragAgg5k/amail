@@ -3,7 +3,7 @@
 // Package e2e_test runs mailslot's commands against the real Apple Mail app.
 //
 // This suite changes mail: it marks, flags, moves and deletes messages, and on a real account it sends
-// a message to the account's own address and opens drafts. It is written for a dedicated test account
+// a message to the account's own address and replies to it there. It is written for a dedicated test account
 // or for the hosted CI runner, whose Mail has only local mailboxes. Never run it on a personal Mac.
 //
 // It runs only when MAILSLOT_E2E_ACCOUNT names the account to use (local for the On My Mac mailboxes)
@@ -15,6 +15,7 @@ package e2e_test
 
 import (
 	"fmt"
+	netmail "net/mail"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,13 +36,14 @@ const (
 	flagColor       = "red"
 	expectedCode    = "123456"
 	codeBody        = "Your code is " + expectedCode + "."
-	replyBody       = "mailslot end-to-end reply draft; safe to delete."
+	replyBody       = "mailslot end-to-end reply; safe to delete."
 	waitTimeout     = "5m"
 	waitInterval    = "5s"
 	waitHeadStart   = 10 * time.Second
 	subjectPrefix   = "mailslot-e2e-"
 	csvName         = "people.csv"
 	noArchive       = "the account has no archive mailbox"
+	allMail         = "All Mail"
 )
 
 // TestReadAndTriage covers reading and triage. It runs for local too, since the CI runner has no accounts.
@@ -369,15 +371,20 @@ func TestAccount(t *testing.T) {
 		t.Logf("message %d arrived", sent.ID)
 	})
 
-	t.Run("reply draft", func(t *testing.T) {
+	t.Run("reply", func(t *testing.T) {
 		if sent.MessageID == "" {
 			t.Skip("needs the message from send and wait")
 		}
-		// Opens a draft window in Mail, which stays open; the autosaved draft is put in Trash at cleanup.
-		var drafted delivery
-		current.run(t, "reply", sent.MessageID, "--body", replyBody).expect(t, failure.Success).decode(t, &drafted)
-		if drafted.Sent {
-			t.Fatal("reply without --send reported the reply as sent")
+		// reply answers the Reply-To address, else the sender, so it is sent only when that is the account's own address.
+		original := current.read(t, sent.MessageID, sent.Mailbox)
+		recipient := valueOr(original.ReplyTo, original.Sender)
+		if parsed, err := netmail.ParseAddress(recipient); err != nil || !strings.EqualFold(parsed.Address, own) {
+			t.Fatal("the reply would not go to the account's own address; nothing was sent")
+		}
+		var replied delivery
+		current.run(t, "reply", sent.MessageID, "--mailbox", sent.Mailbox, "--body", replyBody, "--send").expect(t, failure.Success).decode(t, &replied)
+		if !replied.Sent {
+			t.Fatal("reply --send reported the reply as not sent")
 		}
 	})
 
@@ -394,7 +401,9 @@ func TestAccount(t *testing.T) {
 	})
 }
 
-// discard puts every message whose subject carries the token, received, sent or drafted, in Trash.
+// discard puts every message whose subject carries the token, received or sent, in Trash. Search lists
+// one row per mailbox copy (Gmail shows a message in Inbox, All Mail and Sent Mail), so each Message-ID
+// is deleted once, never through All Mail, and a copy that is already gone counts as handled.
 func (current *session) discard(t *testing.T, token string) {
 	t.Helper()
 	trash := current.trash(t)
@@ -405,16 +414,26 @@ func (current *session) discard(t *testing.T, token string) {
 		return
 	}
 	result.decode(t, &found)
+	handled := make(map[string]bool, len(found))
 	removed := 0
 	for _, row := range found {
-		if same(row.Mailbox, trash) || !strings.Contains(row.Subject, token) {
+		key := strings.ToLower(row.MessageID)
+		if key == "" {
+			key = strings.ToLower(row.Mailbox) + "/" + strconv.Itoa(row.ID)
+		}
+		if handled[key] || same(row.Mailbox, trash) || same(row.Mailbox, allMail) || !strings.Contains(row.Subject, token) {
 			continue
 		}
-		if result := current.run(t, "delete", strconv.Itoa(row.ID), "--mailbox", row.Mailbox); result.code != failure.Success {
+		switch result := current.run(t, "delete", strconv.Itoa(row.ID), "--mailbox", row.Mailbox); result.code {
+		case failure.Success:
+			removed++
+		case failure.NotFound:
+			t.Logf("cleanup found message %d of %q already gone", row.ID, row.Mailbox)
+		default:
 			t.Errorf("cleanup could not put message %d of %q in Trash; stderr: %s", row.ID, row.Mailbox, strings.TrimSpace(result.stderr))
 			continue
 		}
-		removed++
+		handled[key] = true
 	}
 	t.Logf("cleanup put %d test messages in Trash", removed)
 }

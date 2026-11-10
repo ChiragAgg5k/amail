@@ -38,6 +38,7 @@ type attachment struct {
 
 type message struct {
 	summary
+	ReplyTo     string       `json:"replyTo"`
 	Content     string       `json:"content"`
 	Attachments []attachment `json:"attachments"`
 }
