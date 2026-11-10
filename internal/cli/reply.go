@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const everyoneName = "all"
+
 func (app *application) reply() *cobra.Command {
 	var composition composition
 	var mailbox string
@@ -44,7 +46,7 @@ func (app *application) reply() *cobra.Command {
 		},
 	}
 	mailboxFlag(command, &mailbox)
-	command.Flags().BoolVar(&everyone, "all", false, "copy the other recipients of the original")
+	command.Flags().BoolVar(&everyone, everyoneName, false, "copy the other recipients of the original")
 	composition.flags(command)
 	return changing(command)
 }

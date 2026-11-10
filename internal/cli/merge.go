@@ -14,23 +14,6 @@ import (
 	"github.com/ChiragAgg5k/mailslot/internal/merge"
 )
 
-// mailing holds the templated fields of a merge, one draft per CSV row.
-type mailing struct {
-	to      []string
-	cc      []string
-	subject string
-	dryRun  bool
-}
-
-// merged is one row of a merge's report.
-type merged struct {
-	Row     int      `json:"row"`
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	// Body is reported on a dry run only.
-	Body string `json:"body,omitempty"`
-}
-
 func (app *application) merge() *cobra.Command {
 	var composition composition
 	var options mailing
@@ -75,17 +58,17 @@ func (app *application) merge() *cobra.Command {
 			return app.mailed(output, rows, false)
 		},
 	}
-	command.Flags().StringArrayVar(&options.to, "to", nil, "recipient template, such as '{{email}}' (repeatable)")
-	command.Flags().StringArrayVar(&options.cc, "cc", nil, "copied recipient template (repeatable)")
-	command.Flags().StringVar(&options.subject, "subject", "", "subject line template")
-	command.Flags().StringVar(&composition.body, "body", "", "message text template")
-	command.Flags().StringVar(&composition.bodyFile, "body-file", "", "file holding the message text template (- for standard input)")
-	command.Flags().StringArrayVar(&composition.attachments, "attach", nil, "file to attach to every draft (repeatable)")
-	command.Flags().StringVar(&composition.from, "from", "", "sender address; it must belong to the account")
-	command.Flags().StringVar(&composition.signature, "signature", "", "name of a Mail signature to append")
-	command.MarkFlagsMutuallyExclusive("body", "body-file")
-	_ = command.MarkFlagRequired("to")
-	_ = command.MarkFlagRequired("subject")
+	command.Flags().StringArrayVar(&options.to, toName, nil, "recipient template, such as '{{email}}' (repeatable)")
+	command.Flags().StringArrayVar(&options.cc, ccName, nil, "copied recipient template (repeatable)")
+	command.Flags().StringVar(&options.subject, subjectName, "", "subject line template")
+	command.Flags().StringVar(&composition.body, bodyName, "", "message text template")
+	command.Flags().StringVar(&composition.bodyFile, bodyFileName, "", "file holding the message text template (- for standard input)")
+	command.Flags().StringArrayVar(&composition.attachments, attachName, nil, "file to attach to every draft (repeatable)")
+	command.Flags().StringVar(&composition.from, fromName, "", "sender address; it must belong to the account")
+	command.Flags().StringVar(&composition.signature, signatureName, "", "name of a Mail signature to append")
+	command.MarkFlagsMutuallyExclusive(bodyName, bodyFileName)
+	_ = command.MarkFlagRequired(toName)
+	_ = command.MarkFlagRequired(subjectName)
 	dryRunFlag(command, &options.dryRun)
 	return changing(command)
 }
@@ -145,7 +128,7 @@ func (options mailing) drafts(path string, composition *composition, input io.Re
 			return nil, nil, failure.Wrap(failure.Usage, err, "")
 		}
 		drafts = append(drafts, mail.Draft{
-			From:        composition.from,
+			From:        composition.address(),
 			Signature:   composition.signature,
 			To:          recipients,
 			Cc:          copied,

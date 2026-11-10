@@ -43,7 +43,7 @@ func (client Client) Compose(ctx context.Context, draft Draft) (Delivery, error)
 	draft.Attachments = present(draft.Attachments)
 	var delivery Delivery
 	err := client.run(ctx, composeScript, Target{}, draft, &delivery)
-	return delivery, err
+	return delivery, Settle(err, draft.Send)
 }
 
 // Reply builds an answer to the message with the original text quoted beneath the body.

@@ -97,6 +97,17 @@ func TestSendFromAlias(t *testing.T) {
 	}
 }
 
+func TestSendFromDisplayName(t *testing.T) {
+	var delivery mail.Delivery
+	execute(t, composeArguments("--from", "Sam Rivera <"+composeAlias+">", "--send", "--json")...).succeeded(t).decode(t, &delivery)
+	if !delivery.Sent || delivery.Sender != composeAlias {
+		t.Fatalf("delivery %+v, want sent from %s", delivery, composeAlias)
+	}
+	if sender := composeFind(t, composeSent, composeSubject).Sender; sender != composeAlias {
+		t.Fatalf("sent sender %q, want %q", sender, composeAlias)
+	}
+}
+
 func TestSendFromForeignAddress(t *testing.T) {
 	outcome := execute(t, composeArguments("--from", "sam.rivera@example.org", "--send")...)
 	composeExpect(t, outcome, failure.Usage)
