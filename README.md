@@ -251,7 +251,7 @@ The unit and command tests run against the fixture backend and never touch Mail.
 The end-to-end suite drives the real Mail app and changes the mailboxes it is given. It is opt-in: run it only on a dedicated account or local mailboxes that hold nothing you care about.
 
 ```sh
-MAILSLOT_E2E_ACCOUNT=local go test -tags e2e ./internal/e2e/ -v -count=1
+MAILSLOT_E2E_ACCOUNT=local go test -tags e2e ./internal/e2e/ -v -count=1 -timeout 15m
 ```
 
 CI runs it in the `e2e-local` job on hosted macOS runners, which have no accounts: it imports the fixture into local mailboxes and tests against them.
