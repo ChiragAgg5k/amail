@@ -18,6 +18,8 @@ const (
 	defaultWaitInterval = 10 * time.Second
 	// lookback widens the search past the start so a Mail search by date never drops a message received today.
 	lookback = 24 * time.Hour
+	// grace accepts a message the server received shortly before wait started that Mail had not fetched yet.
+	grace = 2 * time.Minute
 )
 
 // arrival is what wait prints: the message that arrived and, with --code, its one-time code.
@@ -35,7 +37,9 @@ func (app *application) wait() *cobra.Command {
 		Use:   "wait",
 		Short: "Wait for a new message from a sender or with a subject to arrive",
 		Long: "Check for new mail every --interval until a message matching --from or --subject arrives in the mailbox, or --timeout passes. " +
-			"Only messages received after wait started count. With --code, print just the one-time code found in the message.",
+			"Only messages that were not there on the first check count, and none received more than 2 minutes before wait started. " +
+			"With --code, print just the one-time code found in the message. " +
+			"Wait still runs under the read-only switch: it asks Mail to check for new mail but changes no message.",
 		Args: cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
 			if query.From == "" && query.Subject == "" {
@@ -79,10 +83,12 @@ func (app *application) wait() *cobra.Command {
 	return command
 }
 
-// await polls until a matching message arrives that was not there on the first poll and was received
-// after the start. Each backend call takes the Mail lock on its own, so other commands run between polls.
+// await polls until a matching message arrives that was not there on the first poll. The receive date is the
+// server's arrival time, which can predate the start when Mail fetches late, so only a message received before
+// the grace window is ignored. Each backend call takes the Mail lock on its own, so other commands run between polls.
 func (app *application) await(ctx context.Context, query mail.Query, timeout, interval time.Duration) (mail.Summary, error) {
 	start := time.Now().Truncate(time.Second)
+	earliest := start.Add(-grace)
 	since := start.Add(-lookback)
 	query.Since = &since
 	bounded, cancel := context.WithTimeout(ctx, timeout)
@@ -113,7 +119,7 @@ func (app *application) await(ctx context.Context, query mail.Query, timeout, in
 			return mail.Summary{}, expired(err)
 		}
 		for _, row := range rows {
-			if _, old := seen[row.ID]; old || row.Received == nil || row.Received.Before(start) {
+			if _, old := seen[row.ID]; old || (row.Received != nil && row.Received.Before(earliest)) {
 				continue
 			}
 			return row, nil
