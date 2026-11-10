@@ -15,6 +15,9 @@ import (
 
 const interval = 100 * time.Millisecond
 
+// ErrHeld is the cause of the failure Acquire returns when another process kept the lock past the timeout.
+var ErrHeld = errors.New("another mailslot command is still talking to Mail")
+
 // Lock is an exclusive advisory lock on a file.
 type Lock struct {
 	file *os.File
@@ -48,7 +51,7 @@ func Acquire(ctx context.Context, path string, timeout time.Duration) (*Lock, er
 			return nil, ctx.Err()
 		case <-deadline.C:
 			file.Close()
-			return nil, failure.New(failure.Busy, "another mailslot command is still talking to Mail", "wait for it to finish and try again")
+			return nil, failure.Wrap(failure.Busy, ErrHeld, "wait for it to finish and try again")
 		case <-ticker.C:
 		}
 	}

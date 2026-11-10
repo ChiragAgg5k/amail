@@ -125,12 +125,12 @@ mailslot delete 4807 -m Archive
 ```
 
 - `archive` moves to the account's archive mailbox (`Archive`, `Archives` or `All Mail`).
-- `delete` moves to the account's Trash (`Trash`, `Deleted Items`, `Deleted Messages` or `Bin`). Nothing is ever erased: a message already in the Trash is left there, and emptying the Trash is up to you in Mail.
+- `delete` moves to the account's Trash (`Trash`, `Deleted Items`, `Deleted Messages` or `Bin`). Nothing is ever erased: a message already in the Trash is left there with exit code 2, and emptying the Trash is up to you in Mail.
 - `move` only moves between mailboxes of the same account.
 
 ### wait
 
-Blocks until a new message from a sender or with a subject arrives, checking for new mail every `--interval` (default 10s) until `--timeout` (default 5m). Only messages received after `wait` started count. `--code` prints just the one-time code found in the message.
+Blocks until a new message from a sender or with a subject arrives, checking for new mail every `--interval` (default 10s) until `--timeout` (default 5m). Only messages that were not there on its first check count, and none the server received more than 2 minutes before `wait` started. `--code` prints just the one-time code found in the message.
 
 ```sh
 mailslot wait --from no-reply@example.com --subject 'verification code' --code --timeout 2m
@@ -209,7 +209,7 @@ read_only = true
 send = false
 ```
 
-- **Read-only** (`read_only = true` or `MAILSLOT_READ_ONLY=1`): `mark`, `flag`, `move`, `archive`, `delete`, `send`, `reply` and `merge` refuse with exit code 6. `--dry-run` still works.
+- **Read-only** (`read_only = true` or `MAILSLOT_READ_ONLY=1`): `mark`, `flag`, `move`, `archive`, `delete`, `send`, `reply` and `merge` refuse with exit code 6. `--dry-run` still works. `wait` still runs: it asks Mail to check for new mail but changes no message.
 - **No send** (`send = false` or `MAILSLOT_NO_SEND=1`): `--send` refuses with exit code 6. Drafts still open for review.
 
 ## Local mailboxes

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/ChiragAgg5k/mailslot/internal/config"
 	"github.com/ChiragAgg5k/mailslot/internal/failure"
+	"github.com/ChiragAgg5k/mailslot/internal/lock"
 	"github.com/ChiragAgg5k/mailslot/internal/mail"
 )
 
@@ -39,11 +39,6 @@ const (
 	sourceConfig      = "config"
 	sourceEnvironment = "environment"
 )
-
-// diagnosis is everything doctor found, in the order it checked.
-type diagnosis struct {
-	Checks []check `json:"checks"`
-}
 
 func (app *application) doctor() *cobra.Command {
 	return &cobra.Command{
@@ -105,6 +100,10 @@ func (app *application) mailChecks(ctx context.Context) []check {
 	status, err := backend.Ping(ctx)
 	if err != nil {
 		reason := "needs Mail to answer"
+		if errors.Is(err, lock.ErrHeld) {
+			unknown := "unknown while another mailslot command holds the lock"
+			return []check{failed(checkMail, err), skipped(checkAutomation, unknown), skipped(checkAccounts, reason)}
+		}
 		switch failure.CodeOf(err) {
 		case failure.Permission, failure.Busy:
 			return []check{skipped(checkMail, "no answer; see "+checkAutomation), failed(checkAutomation, err), skipped(checkAccounts, reason)}
@@ -180,25 +179,4 @@ func describeSwitch(name string, on, fromConfig, fromEnvironment bool) string {
 		sources = append(sources, sourceEnvironment)
 	}
 	return fmt.Sprintf("%s on (%s)", name, strings.Join(sources, ", "))
-}
-
-func (found diagnosis) table(output io.Writer) {
-	columns(output, "CHECK\tSTATUS\tDETAIL", func(writer io.Writer) {
-		for _, item := range found.Checks {
-			fmt.Fprintf(writer, "%s\t%s\t%s\n", item.Name, item.Status, item.Detail)
-			if item.Hint != "" && (item.Status == checkFailed || item.Status == checkWarned) {
-				fmt.Fprintf(writer, "\t\thint: %s\n", item.Hint)
-			}
-		}
-	})
-}
-
-// verdict fails with the exit code of the first failed check, so a missing permission exits 3.
-func (found diagnosis) verdict() error {
-	for _, item := range found.Checks {
-		if item.Status == checkFailed {
-			return failure.New(item.code, fmt.Sprintf("the %s check failed", item.Name), "")
-		}
-	}
-	return nil
 }
