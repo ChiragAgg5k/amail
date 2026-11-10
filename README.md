@@ -11,8 +11,6 @@
 
 _Every recording in this README runs against invented mail (the [fixture backend](CONTRIBUTING.md#fixture-backend)), not a real mailbox._
 
-Arriving from `amail`? This is the same tool under its new name. v0.1.0 stays published as `amail`; everything after it is `mailslot`.
-
 ## Is this for you?
 
 Yes, if:
@@ -36,7 +34,7 @@ Use something else if:
 | Go | `go install github.com/ChiragAgg5k/mailslot@latest` (needs Go 1.25 or newer) |
 | Release binary | Download from the [releases page](https://github.com/ChiragAgg5k/mailslot/releases), unpack, and move `mailslot` onto your `PATH` |
 
-The release binaries are not signed or notarised yet, so a browser download is quarantined by macOS; the Homebrew and Go routes build on your Mac and are not affected. If `@latest` still resolves to v0.1.0 (the release under the old name, which does not install), ask for the version explicitly: `go install github.com/ChiragAgg5k/mailslot@v0.2.0`.
+The release binaries are not signed or notarised yet, so a browser download is quarantined by macOS; the Homebrew and Go routes build on your Mac and are not affected.
 
 ### First run
 
