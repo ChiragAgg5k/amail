@@ -262,6 +262,7 @@ CI runs it in the `e2e-local` job on hosted macOS runners, which have no account
 - **Search reads bodies only with `--body`**, which is slow and needs `--since`. By default it matches subject and sender.
 - **Replies are new messages.** Mail does not let scripts see the quoted text of its own reply window, so `mailslot reply` writes a fresh message with the original quoted below your text. It threads by subject in most clients but carries no `In-Reply-To` header.
 - **`read --raw` may be incomplete on Exchange** when Mail has not downloaded the whole message.
+- **Exchange accounts show kind `unknown`.** `accounts` prints the account type Mail reports, and Mail's scripting dictionary only knows `pop`, `smtp`, `imap` and `iCloud`, so it reports Exchange as `unknown`.
 - **Flag colour order is unconfirmed.** Mail's scripting dictionary only documents the flag index; the mapping from colour names follows Mail's Flag menu and is still being checked against Mail.
 - **Message IDs belong to this Mac.** They are Mail's local identifiers, not something another machine understands, and they change when a message moves. The Message-ID travels; the numeric id does not.
 - **Plain text only** when writing.
