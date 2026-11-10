@@ -30,17 +30,13 @@ Use something else if:
 
 `mailslot` needs macOS with the Mail app, and either an account in Mail or a mailbox under On My Mac.
 
-| Way | State |
+| Way | Command |
 |---|---|
-| `go install` | Works today from `main` (needs Go 1.25 or newer) |
-| Homebrew | Planned in the `ChiragAgg5k/homebrew-tools` tap; not published yet |
-| Release binaries | None under the name `mailslot` yet. The only release, v0.1.0, has the old `amail` binary |
+| Homebrew | `brew install chiragagg5k/tools/mailslot` (builds from source) |
+| Go | `go install github.com/ChiragAgg5k/mailslot@latest` (needs Go 1.25 or newer) |
+| Release binary | Download from the [releases page](https://github.com/ChiragAgg5k/mailslot/releases), unpack, and move `mailslot` onto your `PATH` |
 
-```sh
-go install github.com/ChiragAgg5k/mailslot@main
-```
-
-`@latest` starts working with the first `mailslot` release: until then it resolves to v0.1.0, which predates the rename and does not install. When binaries are published they will be unsigned until a signing certificate is set up, and the release notes will say so.
+The release binaries are not signed or notarised yet, so a browser download is quarantined by macOS; the Homebrew and Go routes build on your Mac and are not affected. If `@latest` still resolves to v0.1.0 (the release under the old name, which does not install), ask for the version explicitly: `go install github.com/ChiragAgg5k/mailslot@v0.2.0`.
 
 ### First run
 
