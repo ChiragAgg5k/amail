@@ -101,7 +101,7 @@ func TestDoctorTimeout(t *testing.T) {
 
 func TestDoctorLockHeld(t *testing.T) {
 	prepare(t, setup{})
-	path, err := mail.LockPath()
+	path, err := mail.FixtureLockPath()
 	if err != nil {
 		t.Fatalf("lock path: %v", err)
 	}

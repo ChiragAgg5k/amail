@@ -18,7 +18,8 @@ const (
 )
 
 // open picks the backend, Mail itself or the fixture named by MAILSLOT_FIXTURE, behind the queue that
-// lets one mailslot command at a time through.
+// lets one mailslot command at a time through. Fixture runs queue behind their own lock file, so a
+// test or recording never waits for a command that is talking to Mail.
 func (app *application) open() (mail.Backend, error) {
 	var backend mail.Backend = mail.Client{}
 	if app.fixture != "" {
@@ -32,7 +33,11 @@ func (app *application) open() (mail.Backend, error) {
 		}
 		backend = fixed
 	}
-	path, err := mail.LockPath()
+	locate := mail.LockPath
+	if app.fixture != "" {
+		locate = mail.FixtureLockPath
+	}
+	path, err := locate()
 	if err != nil {
 		return nil, failure.Wrap(failure.General, err, "")
 	}

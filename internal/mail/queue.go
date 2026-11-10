@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	cacheDirectory = "mailslot"
-	lockFile       = "mail.lock"
+	cacheDirectory  = "mailslot"
+	lockFile        = "mail.lock"
+	fixtureLockFile = "fixture.lock"
 )
 
 // Queue lets one call at a time through to its backend, across processes, because Mail answers one request at a time.
@@ -28,11 +29,21 @@ var _ Backend = Queue{}
 
 // LockPath is where mailslot commands queue for Mail.
 func LockPath() (string, error) {
+	return cachePath(lockFile)
+}
+
+// FixtureLockPath is where commands running against a fixture queue, apart from the ones talking to
+// Mail, so a test or recording never waits for a real command.
+func FixtureLockPath() (string, error) {
+	return cachePath(fixtureLockFile)
+}
+
+func cachePath(name string) (string, error) {
 	base, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("find cache directory: %w", err)
 	}
-	return filepath.Join(base, cacheDirectory, lockFile), nil
+	return filepath.Join(base, cacheDirectory, name), nil
 }
 
 func queued[Result any](queue Queue, ctx context.Context, call func() (Result, error)) (result Result, err error) {
