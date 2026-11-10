@@ -3,8 +3,10 @@ package cli
 import (
 	"fmt"
 	"io"
+	netmail "net/mail"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -19,6 +21,8 @@ type composition struct {
 	body        string
 	bodyFile    string
 	attachments []string
+	from        string
+	signature   string
 	deliver     bool
 }
 
@@ -26,6 +30,8 @@ func (composition *composition) flags(command *cobra.Command) {
 	command.Flags().StringVar(&composition.body, "body", "", "message text")
 	command.Flags().StringVar(&composition.bodyFile, "body-file", "", "file holding the message text (- for standard input)")
 	command.Flags().StringArrayVar(&composition.attachments, "attach", nil, "file to attach (repeatable)")
+	command.Flags().StringVar(&composition.from, "from", "", "sender address; must belong to the account (default: the account's first address)")
+	command.Flags().StringVar(&composition.signature, "signature", "", "name of a Mail signature to append (default: none)")
 	command.Flags().BoolVar(&composition.deliver, sendName, false, "send immediately instead of opening a draft in Mail")
 	command.MarkFlagsMutuallyExclusive("body", "body-file")
 }
@@ -39,10 +45,16 @@ func (composition *composition) text(input io.Reader) (string, error) {
 		return composition.body, nil
 	case standardInput:
 		content, err := io.ReadAll(input)
-		return string(content), err
+		if err != nil {
+			return "", fmt.Errorf("read message text from standard input: %w", err)
+		}
+		return string(content), nil
 	}
 	content, err := os.ReadFile(composition.bodyFile)
-	return string(content), err
+	if err != nil {
+		return "", failure.Wrap(failure.Usage, fmt.Errorf("body file: %w", err), "")
+	}
+	return string(content), nil
 }
 
 func (composition *composition) files() ([]string, error) {
@@ -64,6 +76,33 @@ func (composition *composition) files() ([]string, error) {
 	return paths, nil
 }
 
+// sender refuses a --from address the account does not own, before Mail is asked to compose anything.
+func (composition *composition) sender(account mail.Account) error {
+	if composition.from == "" {
+		return nil
+	}
+	address := composition.from
+	if parsed, err := netmail.ParseAddress(composition.from); err == nil {
+		address = parsed.Address
+	}
+	if account.Owns(address) {
+		return nil
+	}
+	return failure.New(
+		failure.Usage,
+		fmt.Sprintf("%s is not an address of account %q", composition.from, account.Name),
+		"pick one of: "+strings.Join(account.Addresses, ", "),
+	)
+}
+
+// sign copies the account, sender, signature and send choice onto the draft.
+func (composition *composition) sign(draft *mail.Draft, account mail.Account) {
+	draft.Account = account.Name
+	draft.From = composition.from
+	draft.Signature = composition.signature
+	draft.Send = composition.deliver
+}
+
 // outgoing refuses the local pseudo-account, which has no server to send through.
 func outgoing(account mail.Account) error {
 	if account.Name == mail.Local {
@@ -72,6 +111,7 @@ func outgoing(account mail.Account) error {
 	return nil
 }
 
+// compose hands the draft to Mail, which reads the sender back and refuses a mismatch before sending.
 func (app *application) compose(command *cobra.Command, draft mail.Draft) error {
 	delivery, err := app.backend.Compose(command.Context(), draft)
 	if err != nil {
@@ -82,7 +122,7 @@ func (app *application) compose(command *cobra.Command, draft mail.Draft) error 
 			fmt.Fprintf(output, "Sent from %s.\n", delivery.Sender)
 			return
 		}
-		fmt.Fprintln(output, "Opened as a draft in Mail; nothing was sent. Pass --send to send without review.")
+		fmt.Fprintf(output, "Opened as a draft from %s in Mail; nothing was sent. Pass --send to send without review.\n", delivery.Sender)
 	})
 }
 
@@ -92,7 +132,7 @@ func (app *application) send() *cobra.Command {
 	command := &cobra.Command{
 		Use:   "send",
 		Short: "Write a new message",
-		Long:  "Write a new message. It opens as a draft in Mail unless --send is given.",
+		Long:  "Write a new message. It opens as a draft in Mail unless --send is given. Mail's sender is read back and checked before anything is sent.",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
 			body, err := composition.text(command.InOrStdin())
@@ -110,10 +150,12 @@ func (app *application) send() *cobra.Command {
 			if err := outgoing(account); err != nil {
 				return err
 			}
-			draft.Account = account.Name
+			if err := composition.sender(account); err != nil {
+				return err
+			}
+			composition.sign(&draft, account)
 			draft.Body = body
 			draft.Attachments = files
-			draft.Send = composition.deliver
 			return app.compose(command, draft)
 		},
 	}
