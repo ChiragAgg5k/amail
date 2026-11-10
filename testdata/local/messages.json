@@ -1,0 +1,68 @@
+[
+  {
+    "id": 2001,
+    "messageId": "local-2001@shop.example.com",
+    "account": "local",
+    "mailbox": "Receipts",
+    "subject": "Receipt for order 60417",
+    "sender": "Brightleaf Books <orders@shop.example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-09-30T12:00:00Z",
+    "received": "2026-09-30T12:01:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Thank you for your order.\n\nOrder 60417\n1 x Field guide to mosses  18.00\nTotal                     18.00",
+    "attachments": []
+  },
+  {
+    "id": 2002,
+    "messageId": "local-2002@mail.example.com",
+    "account": "local",
+    "mailbox": "Import/fixture",
+    "subject": "mailslot-e2e-marker imported note",
+    "sender": "Dana Okafor <dana.okafor@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-03-02T09:00:00Z",
+    "received": "2026-03-02T09:01:00Z",
+    "read": false,
+    "flag": -1,
+    "content": "This note was imported from an mbox file.\nNothing to do here.\n\nDana",
+    "attachments": []
+  },
+  {
+    "id": 2003,
+    "messageId": "local-2003@mail.example.org",
+    "account": "local",
+    "mailbox": "Archive",
+    "subject": "Archived: garden plans",
+    "sender": "Léa Moreau <lea.moreau@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-04-14T08:30:00Z",
+    "received": "2026-04-14T08:31:00Z",
+    "read": true,
+    "flag": 3,
+    "content": "Tomatoes along the south fence, herbs by the door.\nWe plant after the last frost.\n\nLéa",
+    "attachments": []
+  }
+]

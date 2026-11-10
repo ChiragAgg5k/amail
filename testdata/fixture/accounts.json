@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Work",
+    "addresses": [
+      "sam.rivera@example.com",
+      "sam@example.com"
+    ],
+    "kind": "imap",
+    "enabled": true
+  },
+  {
+    "name": "Personal",
+    "addresses": [
+      "sam.rivera@example.org"
+    ],
+    "kind": "iCloud",
+    "enabled": true
+  },
+  {
+    "name": "Old",
+    "addresses": [
+      "old@example.net"
+    ],
+    "kind": "pop",
+    "enabled": false
+  }
+]

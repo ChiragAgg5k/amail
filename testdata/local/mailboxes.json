@@ -1,0 +1,18 @@
+[
+  {
+    "account": "local",
+    "name": "Receipts"
+  },
+  {
+    "account": "local",
+    "name": "Archive"
+  },
+  {
+    "account": "local",
+    "name": "Trash"
+  },
+  {
+    "account": "local",
+    "name": "Import/fixture"
+  }
+]
