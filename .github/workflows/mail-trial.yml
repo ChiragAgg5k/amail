@@ -1,0 +1,272 @@
+name: Mail trial
+
+# Throwaway research workflow for issue #22. It lives only on this branch and is never merged.
+on:
+  push:
+    branches: [research/ci-mail-trial]
+    paths: ['.github/workflows/mail-trial.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26, xcode-27]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      MAILBOX: amail-ci-probe
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Helpers
+        run: |
+          TRIAL="$HOME/amail-trial"
+          echo "TRIAL=$TRIAL" >> "$GITHUB_ENV"
+          mkdir -p "$TRIAL/shots" "$TRIAL/js"
+          cat > "$TRIAL/lib.sh" <<'LIB'
+          set +e
+          set +o pipefail
+          limit() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+          clean() { printf '%s' "$1" | tr '\n\r|' '  /' | cut -c1-500; }
+          # probe <name> <seconds> <command...>: run with a hard timeout, record exit code, stdout and stderr.
+          probe() {
+            local name=$1 seconds=$2 out err code
+            shift 2
+            out=$(limit "$seconds" "$@" 2>"$TRIAL/stderr.txt")
+            code=$?
+            err=$(cat "$TRIAL/stderr.txt")
+            [ "$code" = 142 ] && err="TIMEOUT after ${seconds}s $err"
+            echo "PROBE-RESULT | $name | exit=$code | stdout=$(clean "$out") | stderr=$(clean "$err")"
+            echo "| $name | $code | \`$(clean "$out")\` | \`$(clean "$err")\` |" >> "$GITHUB_STEP_SUMMARY"
+            return "$code"
+          }
+          shot() { limit 30 screencapture -x "$TRIAL/shots/$1.png" || echo "screencapture $1 failed: $?"; }
+          windows() {
+            limit 30 osascript -e 'tell application "System Events" to get {name, subrole, size} of every window of process "Mail"'
+            limit 30 osascript -e 'tell application "System Events" to get name of every process whose visible is true'
+          }
+          LIB
+
+          cat > "$TRIAL/js/version.js" <<'JS'
+          function run() { return Application('Mail').version(); }
+          JS
+          cat > "$TRIAL/js/accounts.js" <<'JS'
+          function run() { return Application('Mail').accounts.length; }
+          JS
+          cat > "$TRIAL/js/mailboxes.js" <<'JS'
+          function run() {
+            const Mail = Application('Mail');
+            return JSON.stringify({ count: Mail.mailboxes.length, names: Mail.mailboxes.name() });
+          }
+          JS
+          cat > "$TRIAL/js/make.js" <<'JS'
+          function run(argv) {
+            const Mail = Application('Mail');
+            const mailbox = Mail.Mailbox({ name: argv[0] });
+            Mail.mailboxes.push(mailbox);
+            return Mail.mailboxes.byName(argv[0]).name();
+          }
+          JS
+          cat > "$TRIAL/js/import.js" <<'JS'
+          function run(argv) {
+            const Mail = Application('Mail');
+            return String(Mail.importMailMailbox({ at: Path(argv[0]) }));
+          }
+          JS
+          cat > "$TRIAL/js/count.js" <<'JS'
+          function run() {
+            const Mail = Application('Mail');
+            const walk = (boxes, prefix) => boxes.flatMap((box) => {
+              const name = prefix + box.name();
+              return [{ name: name, messages: box.messages.length }].concat(walk(box.mailboxes(), name + '/'));
+            });
+            return JSON.stringify(walk(Mail.mailboxes(), ''));
+          }
+          JS
+          cat > "$TRIAL/js/subject.js" <<'JS'
+          function run() {
+            const Mail = Application('Mail');
+            const find = (boxes) => {
+              for (const box of boxes) {
+                if (box.messages.length > 0) {
+                  const message = box.messages[0];
+                  return { mailbox: box.name(), subject: message.subject(), sender: message.sender(), content: message.content().trim() };
+                }
+                const nested = find(box.mailboxes());
+                if (nested) return nested;
+              }
+              return null;
+            };
+            return JSON.stringify(find(Mail.mailboxes()));
+          }
+          JS
+
+      - name: Environment
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          sw_vers
+          uname -m
+          csrutil status
+          echo "Mail $(defaults read /System/Applications/Mail.app/Contents/Info CFBundleShortVersionString) ($(defaults read /System/Applications/Mail.app/Contents/Info CFBundleVersion))"
+          echo "ImageOS=$ImageOS ImageVersion=$ImageVersion"
+          echo "Responsible-process chain:"
+          pid=$$
+          while [ -n "$pid" ] && [ "$pid" -gt 0 ]; do
+            ps -o pid=,ppid=,user=,command= -p "$pid" | cut -c1-200
+            pid=$(ps -o ppid= -p "$pid" | tr -d ' ')
+          done
+          echo "Console user: $(stat -f %Su /dev/console)"
+          ls "$HOME/Library/Mail" 2>&1 | head -5
+          {
+            echo "## Mail trial on ${{ matrix.os }}"
+            echo
+            echo "$(sw_vers -productName) $(sw_vers -productVersion) ($(sw_vers -buildVersion)), image $ImageOS $ImageVersion, $(csrutil status)"
+            echo
+            echo "| step | exit | stdout | stderr |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Existing TCC rows
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          USER_DB="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+          if [ "$(sw_vers -productVersion | cut -d. -f1)" -ge 27 ]; then
+            sudo find /private/var/containers/Data/ProtectedSystem -type f -path '*/com.apple.TCC/TCC.db' -print
+            ACTIVE=$(sudo lsof -c tccd -Fn | sed -n 's/^n//p' | grep '/ProtectedSystem/.*/com\.apple\.TCC/TCC\.db$' | sort -u | head -1)
+            [ -n "$ACTIVE" ] && USER_DB=$ACTIVE
+          fi
+          SYSTEM_DB="/Library/Application Support/com.apple.TCC/TCC.db"
+          echo "USER_DB=$USER_DB" >> "$GITHUB_ENV"
+          echo "SYSTEM_DB=$SYSTEM_DB" >> "$GITHUB_ENV"
+          for db in "$USER_DB" "$SYSTEM_DB"; do
+            echo "TCC database: $db"
+            sudo ls -l "$db"
+            sudo sqlite3 "$db" "select cid, name, type from pragma_table_info('access')" | tr '\n' ' '
+            echo
+            sudo sqlite3 -header "$db" "select service, client, client_type, auth_value, auth_reason, auth_version, csreq is null as csreq_null, indirect_object_identifier_type, indirect_object_identifier, flags from access where service = 'kTCCServiceAppleEvents' order by client, indirect_object_identifier"
+            echo "Rows mentioning Mail:"
+            sudo sqlite3 "$db" "select service, client, auth_value, indirect_object_identifier from access where client like '%mail%' or indirect_object_identifier like '%mail%'"
+          done
+
+      - name: Mail before seeding
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          (sleep 25; shot before-seeding; windows) &
+          probe "unseeded: Mail.version()" 60 osascript -l JavaScript "$TRIAL/js/version.js"
+          wait
+          pkill -x Mail
+          sleep 3
+          exit 0
+
+      - name: Seed Automation rows for Mail
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          # Clone every Finder Automation row the image ships into a row that targets Mail, keeping the image's own row shape.
+          seed() {
+            local db=$1 columns
+            columns=$(sudo sqlite3 "$db" "select group_concat(case name when 'indirect_object_identifier' then '''com.apple.mail''' when 'last_modified' then 'cast(strftime(''%s'', ''now'') as integer)' else '\"' || name || '\"' end, ', ') from pragma_table_info('access')")
+            echo "select list for $db: $columns"
+            for attempt in 1 2 3 4 5; do
+              sudo sqlite3 -cmd '.timeout 10000' "$db" "insert or replace into access select $columns from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.finder'" && return 0
+              echo "insert into $db failed (attempt $attempt)"
+              sleep $((attempt * 2))
+            done
+            return 1
+          }
+          seed "$USER_DB"
+          probe "seed user TCC.db" 5 sh -c "exit $?"
+          seed "$SYSTEM_DB"
+          probe "seed system TCC.db" 5 sh -c "exit $?"
+          sudo killall tccd
+          sleep 2
+          for db in "$USER_DB" "$SYSTEM_DB"; do
+            echo "Mail rows in $db:"
+            sudo sqlite3 "$db" "select client, client_type, auth_value, indirect_object_identifier from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.mail'"
+          done
+          count=$(sudo sqlite3 "$USER_DB" "select count(*) from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.mail'")
+          probe "seeded rows in user TCC.db" 10 echo "$count"
+
+      - name: Launch Mail
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          probe "open -g -a Mail" 60 open -g -a Mail
+          sleep 25
+          shot launched
+          pgrep -lx Mail
+          windows
+          exit 0
+
+      - name: Probe Mail
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          probe "Mail.version()" 60 osascript -l JavaScript "$TRIAL/js/version.js"
+          probe "accounts.length" 60 osascript -l JavaScript "$TRIAL/js/accounts.js"
+          probe "mailboxes.length" 60 osascript -l JavaScript "$TRIAL/js/mailboxes.js"
+          probe "make new mailbox (JXA)" 60 osascript -l JavaScript "$TRIAL/js/make.js" "$MAILBOX" ||
+            probe "make new mailbox (AppleScript)" 60 osascript -e "tell application \"Mail\" to make new mailbox with properties {name:\"$MAILBOX\"}"
+          probe "mailboxes after make" 60 osascript -l JavaScript "$TRIAL/js/mailboxes.js"
+          shot after-make
+
+          mkdir -p "$HOME/amail-ci/probe.mbox"
+          {
+            printf 'From alice@example.com Tue Nov 10 10:00:00 2026\nFrom: Alice Example <alice@example.com>\nTo: Bob Example <bob@example.com>\nSubject: amail ci probe one\nDate: Tue, 10 Nov 2026 10:00:00 +0000\nMessage-ID: <probe-one@example.com>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=utf-8\n\nFirst invented message.\n\n'
+            printf 'From carol@example.com Tue Nov 10 10:05:00 2026\nFrom: Carol Example <carol@example.com>\nTo: Bob Example <bob@example.com>\nSubject: amail ci probe two\nDate: Tue, 10 Nov 2026 10:05:00 +0000\nMessage-ID: <probe-two@example.com>\nMIME-Version: 1.0\nContent-Type: text/plain; charset=utf-8\n\nSecond invented message.\n\n'
+          } > "$HOME/amail-ci/probe.mbox/mbox"
+          cp "$HOME/amail-ci/probe.mbox/mbox" "$HOME/amail-ci/flat.mbox"
+          probe "import Mail mailbox (package)" 90 osascript -l JavaScript "$TRIAL/js/import.js" "$HOME/amail-ci/probe.mbox" ||
+            probe "import Mail mailbox (flat file)" 90 osascript -l JavaScript "$TRIAL/js/import.js" "$HOME/amail-ci/flat.mbox"
+          sleep 15
+          probe "mailboxes after import" 60 osascript -l JavaScript "$TRIAL/js/mailboxes.js"
+          probe "message counts" 60 osascript -l JavaScript "$TRIAL/js/count.js"
+          probe "read one subject" 60 osascript -l JavaScript "$TRIAL/js/subject.js"
+          shot after-import
+          windows
+          exit 0
+
+      - name: Build and run amail
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          probe "go build" 300 go build -o amail .
+          probe "amail accounts --json" 60 ./amail accounts --json
+          probe "amail mailboxes --json" 60 ./amail mailboxes --json
+          exit 0
+
+      - name: TCC decisions
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 4
+        run: |
+          source "$TRIAL/lib.sh"
+          limit 180 log show --last 14m --predicate 'subsystem == "com.apple.TCC"' --style compact > "$TRIAL/tcc-full.log"
+          grep -i -E 'com\.apple\.mail|AppleEvents' "$TRIAL/tcc-full.log" > "$TRIAL/tcc.log"
+          rm -f "$TRIAL/tcc-full.log"
+          wc -l "$TRIAL/tcc.log"
+          grep -E 'AUTHREQ_ATTRIBUTION|AUTHREQ_RESULT|Prompting|responsible' "$TRIAL/tcc.log" | cut -c1-600 | head -60
+          ls -la "$HOME/Library/Mail" "$HOME/Library/Mail"/V* 2>&1 | head -40
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "Exit 142 means the hard timeout killed the command." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: trial-${{ matrix.os }}
+          path: |
+            ~/amail-trial/shots
+            ~/amail-trial/tcc.log
+          if-no-files-found: warn
