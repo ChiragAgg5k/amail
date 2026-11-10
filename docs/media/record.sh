@@ -21,12 +21,13 @@ ln -s "$root/testdata/fixture" "$demo/fixture"
 
 cat > "$demo/env.sh" <<ENV
 unset MAILSLOT_ACCOUNT MAILSLOT_READ_ONLY MAILSLOT_NO_SEND MAILSLOT_FIXTURE_FAULT
-# A separate HOME keeps the recording off the real lock file and configuration.
+# A separate HOME and cache directory keep the recording off the real lock file and configuration.
 export HOME="$demo/home"
 export PATH="$demo/bin:\$PATH"
 export MAILSLOT_FIXTURE="$demo/fixture"
 export MAILSLOT_FIXTURE_STATE="$demo/state.json"
 export XDG_CONFIG_HOME="$demo/config"
+export XDG_CACHE_HOME="$demo/cache"
 export TZ=UTC
 cd "$demo/work"
 ENV

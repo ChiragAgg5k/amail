@@ -18,7 +18,7 @@ Arriving from `amail`? This is the same tool under its new name. v0.1.0 stays pu
 Yes, if:
 
 - **You have a locked account.** Your university or company blocks third-party mail clients: no consent for outside OAuth apps, and no IMAP, basic authentication or app passwords. Apple Mail is usually still allowed, and `mailslot` only ever talks to Mail.
-- **You want a script or an AI agent to work on your mail without holding credentials.** `mailslot` is Automation-only: the one macOS permission it needs is Automation control of Mail. It needs no Full Disk Access, no Accessibility and no secrets. Writing is draft-first, and two safety switches can turn changing and sending off entirely.
+- **You want a script or an AI agent to work on your mail without holding credentials.** `mailslot` is Automation-only: the one macOS permission it needs is Automation control of Mail. It needs no Full Disk Access, no Accessibility and no secrets. Writing is draft-first, and two safety switches make `mailslot` refuse to change or send anything.
 
 Use something else if:
 
@@ -95,7 +95,7 @@ mailslot list --unread --json | jq -r '.[] | "\(.id)\t\(.messageId)\t\(.subject)
 
 ### Write
 
-`send` and `reply` are draft-first. Without `--send` they open a draft window in Mail and nothing leaves the Mac. Before anything is sent, Mail's sender is read back and checked; it never falls back to another account.
+`send` and `reply` are draft-first. Without `--send` they open a draft window in Mail and nothing is sent to the recipients. Mail may still save the draft to the account's Drafts mailbox on the server, as it does with any draft. Before anything is sent, Mail's sender is read back and checked; it never falls back to another account.
 
 ```sh
 mailslot send --to dana@example.com --subject 'Notes' --body 'See attached.' --attach notes.pdf
@@ -163,7 +163,7 @@ It also takes `--from`, `--signature`, `--attach` (the same file on every draft)
 
 ![A draft without --send, both switches refusing, and doctor](docs/media/safety.gif)
 
-Two switches make `mailslot` safe to hand to a script or an agent. Set them in the configuration file or the environment; either place turns them on.
+Two switches limit what `mailslot` will do when a script or an agent runs it. Set them in the configuration file or the environment; either place turns them on.
 
 ```toml
 # ~/.config/mailslot/config.toml
@@ -174,6 +174,8 @@ send = false
 
 - **Read-only** (`read_only = true` or `MAILSLOT_READ_ONLY=1`): `mark`, `flag`, `move`, `archive`, `delete`, `send`, `reply` and `merge` refuse with exit code 6. `--dry-run` still works. `wait` still runs: it asks Mail to check for new mail but changes no message.
 - **No-send** (`send = false` or `MAILSLOT_NO_SEND=1`): `--send` refuses with exit code 6. Drafts still open for review.
+
+The switches guard against mistakes; they are not a security boundary. They only apply to `mailslot` commands, read-only still lets mail be read, and a program that can unset an environment variable, edit the configuration file or run `osascript` itself can get around them. Limit what an untrusted agent can run by other means.
 
 ### Doctor
 
