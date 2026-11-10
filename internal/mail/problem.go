@@ -24,3 +24,14 @@ func Unanswered(timeout time.Duration) *failure.Error {
 		"Mail may be busy, or a permission prompt may be waiting unanswered on screen; check for it and try again",
 	)
 }
+
+// MaybeSent reports that Mail did not answer a send in time. Stopping osascript does not cancel the Apple event,
+// so Mail may still send the message, and retrying could send it twice.
+func MaybeSent(problem *failure.Error) *failure.Error {
+	return &failure.Error{
+		Code:    problem.Code,
+		Message: problem.Message,
+		Hint:    "Mail may still have sent it; check the Sent mailbox before retrying",
+		Cause:   problem.Cause,
+	}
+}

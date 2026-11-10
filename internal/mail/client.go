@@ -155,6 +155,15 @@ func source(name string) (string, error) {
 	return string(shared) + "\n" + string(body), nil
 }
 
+// Settle replaces the retry advice of an unanswered send, which Mail may still carry out, with a warning to check Sent first.
+func Settle(err error, send bool) error {
+	var problem *failure.Error
+	if !send || !errors.As(err, &problem) || problem.Code != failure.Busy {
+		return err
+	}
+	return MaybeSent(problem)
+}
+
 // classify turns a script error into a failure by its number and kind, never by its text.
 func classify(problem fault, target Target, timeout time.Duration) error {
 	switch {

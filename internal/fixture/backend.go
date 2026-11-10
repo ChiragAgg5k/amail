@@ -54,7 +54,7 @@ func Open(directory, snapshot string) (*Backend, error) {
 		if err != nil {
 			return nil, fmt.Errorf("locate fixture state: %w", err)
 		}
-		if filepath.Dir(snapshot) == directory {
+		if inside(directory, snapshot) {
 			return nil, failure.New(failure.Usage, "the fixture state file must not live in the fixture directory", "point the state file somewhere else, such as a temporary directory")
 		}
 	}
@@ -63,6 +63,30 @@ func Open(directory, snapshot string) (*Backend, error) {
 		return nil, err
 	}
 	return backend, nil
+}
+
+// inside reports whether the state file sits anywhere under the fixture directory, following symbolic links.
+// The state file may not exist yet, so its nearest existing parent is resolved instead.
+func inside(directory, snapshot string) bool {
+	root, err := filepath.EvalSymlinks(directory)
+	if err != nil {
+		root = directory
+	}
+	parent, rest := filepath.Dir(snapshot), filepath.Base(snapshot)
+	for {
+		if resolved, err := filepath.EvalSymlinks(parent); err == nil {
+			snapshot = filepath.Join(resolved, rest)
+			break
+		}
+		above := filepath.Dir(parent)
+		if above == parent {
+			break
+		}
+		rest = filepath.Join(filepath.Base(parent), rest)
+		parent = above
+	}
+	relative, err := filepath.Rel(root, snapshot)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
 func (backend *Backend) begin(ctx context.Context) (*data, error) {
@@ -322,10 +346,10 @@ func (backend *Backend) Compose(ctx context.Context, draft mail.Draft) (mail.Del
 	defer backend.mutex.Unlock()
 	store, err := backend.begin(ctx)
 	if err != nil {
-		return mail.Delivery{}, err
+		return mail.Delivery{}, mail.Settle(err, draft.Send)
 	}
 	if strings.EqualFold(draft.Account, mail.Local) {
-		return mail.Delivery{}, failure.New(failure.Usage, "local mailboxes cannot send mail; pick an account with --account", "")
+		return mail.Delivery{}, failure.New(failure.Refused, "local mailboxes cannot send mail", "")
 	}
 	account, err := store.account(draft.Account)
 	if err != nil {
@@ -376,6 +400,7 @@ func (backend *Backend) Compose(ctx context.Context, draft mail.Draft) (mail.Del
 	return mail.Delivery{Sent: draft.Send, Sender: sender}, nil
 }
 
+// from picks the sender as compose.js does: the account's first address by default, else the bare form of the requested one.
 func from(account mail.Account, requested string) (string, error) {
 	if requested == "" {
 		if len(account.Addresses) == 0 {
@@ -388,9 +413,9 @@ func from(account mail.Account, requested string) (string, error) {
 		address = parsed.Address
 	}
 	if !account.Owns(address) {
-		return "", failure.New(failure.Usage, fmt.Sprintf("%s is not an address of account %q", requested, account.Name), "pick one of: "+strings.Join(account.Addresses, ", "))
+		return "", failure.New(failure.NotFound, fmt.Sprintf("account %q has no address %s", account.Name, requested), accountHint)
 	}
-	return requested, nil
+	return address, nil
 }
 
 // destination names the mailbox a composed message lands in, adding it when the account has none.

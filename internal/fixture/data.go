@@ -45,7 +45,8 @@ func (store *data) folders(account string) []folder {
 	return owned
 }
 
-// folder finds a mailbox by name, ignoring case; local mailboxes also answer to their leaf name.
+// folder finds a mailbox by name, ignoring case. As in findMailbox of prelude.js, a nested mailbox of any account
+// also answers to its leaf name when no full name matches.
 func (store *data) folder(account, name string) (folder, error) {
 	if name == "" {
 		name = mail.Inbox
@@ -56,11 +57,9 @@ func (store *data) folder(account, name string) (folder, error) {
 			return candidate, nil
 		}
 	}
-	if strings.EqualFold(account, mail.Local) {
-		for _, candidate := range owned {
-			if strings.EqualFold(candidate.leaf(), name) {
-				return candidate, nil
-			}
+	for _, candidate := range owned {
+		if strings.EqualFold(candidate.leaf(), name) {
+			return candidate, nil
 		}
 	}
 	return folder{}, failure.New(failure.NotFound, fmt.Sprintf("no mailbox named %q in account %q", name, account), mailboxHint)

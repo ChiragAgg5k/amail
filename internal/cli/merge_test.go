@@ -112,7 +112,10 @@ func TestMergeRejectsBadInput(t *testing.T) {
 
 func TestMergeFrom(t *testing.T) {
 	path := mergeFile(t, mergeRecipients)
-	execute(t, mergeArguments(path, "--from", "sam@example.com", "--signature", "Short")...).succeeded(t)
+	execute(t, mergeArguments(path, "--from", "Sam Rivera <"+composeAlias+">", "--signature", "Short")...).succeeded(t)
+	if sender := composeFind(t, composeDrafts, "Hello Robin").Sender; sender != composeAlias {
+		t.Fatalf("draft sender %q, want %q", sender, composeAlias)
+	}
 }
 
 func TestMergeReadOnly(t *testing.T) {

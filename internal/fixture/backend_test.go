@@ -241,6 +241,24 @@ func TestStateMustNotLiveInFixtureDirectory(t *testing.T) {
 	t.Setenv(fixture.FaultVariable, "")
 	_, err := fixture.Open(data, filepath.Join(data, "state.json"))
 	code(t, err, failure.Usage)
+	_, err = fixture.Open(data, filepath.Join(data, "nested", "deeper", "state.json"))
+	code(t, err, failure.Usage)
+
+	link := filepath.Join(t.TempDir(), "link")
+	directory, err := filepath.Abs(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(directory, link); err != nil {
+		t.Fatal(err)
+	}
+	_, err = fixture.Open(data, filepath.Join(link, "state.json"))
+	code(t, err, failure.Usage)
+
+	sibling := filepath.Join(t.TempDir(), "testdata-state", "state.json")
+	if _, err := fixture.Open(data, sibling); err != nil {
+		t.Fatalf("state outside the fixture directory: %v", err)
+	}
 }
 
 func TestSourceIsMIME(t *testing.T) {
@@ -370,14 +388,14 @@ func TestCompose(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := backend.Compose(ctx, mail.Draft{Account: "local", To: []string{"x@example.com"}})
-	code(t, err, failure.Usage)
+	code(t, err, failure.Refused)
 	_, err = backend.Compose(ctx, mail.Draft{Account: "Work", From: "alex@example.org"})
-	code(t, err, failure.Usage)
+	code(t, err, failure.NotFound)
 	_, err = backend.Compose(ctx, mail.Draft{Account: "Work", Signature: "Missing"})
 	code(t, err, failure.NotFound)
 
 	delivery, err := backend.Compose(ctx, mail.Draft{Account: "Work", From: "Alex <A@example.com>", To: []string{"Robin <robin@example.com>"}, Subject: "Hello", Body: "Hi\n", Signature: "work"})
-	if err != nil || delivery != (mail.Delivery{Sent: false, Sender: "Alex <A@example.com>"}) {
+	if err != nil || delivery != (mail.Delivery{Sent: false, Sender: "A@example.com"}) {
 		t.Fatalf("draft %+v %v", delivery, err)
 	}
 	drafts, _ := backend.List(ctx, mail.Location{Account: "Work", Mailbox: "Drafts"}, 0, false)
@@ -418,6 +436,12 @@ func TestFaults(t *testing.T) {
 			code(t, err, test.want)
 			_, err = backend.Compose(context.Background(), mail.Draft{Account: "Work"})
 			code(t, err, test.want)
+			_, err = backend.Compose(context.Background(), mail.Draft{Account: "Work", Send: true})
+			code(t, err, test.want)
+			warned := strings.Contains(failure.HintOf(err), "check the Sent mailbox before retrying")
+			if warned != (test.want == failure.Busy) {
+				t.Fatalf("send hint %q", failure.HintOf(err))
+			}
 		})
 	}
 	t.Setenv(fixture.FaultVariable, "sometimes")
