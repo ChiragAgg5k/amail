@@ -266,10 +266,18 @@ func TestDeleteRefusesTrash(t *testing.T) {
 }
 
 func TestMoveCollapsesDuplicateReferences(t *testing.T) {
-	rows := triageRun(t, setup{}, "-a", "Work", "move", "1001", "quarterly-1@mail.example.com", "--to", "Projects")
-	triageExpectMove(t, rows, "Projects", 1001)
-	if moved := triageRead(t, setup{}, "-a", "Work", "quarterly-1@mail.example.com"); moved.Mailbox != "Projects" {
-		t.Fatalf("1001 is in %s", moved.Mailbox)
+	cases := map[string][]string{
+		"numeric and Message-ID": {"1001", "quarterly-1@mail.example.com"},
+		"lowercase mailbox":      {"1001", "quarterly-1@mail.example.com", "-m", "inbox"},
+	}
+	for name, references := range cases {
+		t.Run(name, func(t *testing.T) {
+			rows := triageRun(t, setup{}, append([]string{"-a", "Work", "move"}, append(references, "--to", "Projects")...)...)
+			triageExpectMove(t, rows, "Projects", 1001)
+			if moved := triageRead(t, setup{}, "-a", "Work", "quarterly-1@mail.example.com"); moved.Mailbox != "Projects" {
+				t.Fatalf("1001 is in %s", moved.Mailbox)
+			}
+		})
 	}
 }
 

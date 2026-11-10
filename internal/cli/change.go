@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -35,9 +36,19 @@ type action func(ctx context.Context, target mail.Target) (mail.Summary, error)
 type guard func(target mail.Target) error
 
 // resolved identifies one message after its reference is resolved, so two references to it collapse.
+// It holds the lowercased Message-ID when the message has one, else the lowercased mailbox and id,
+// so Inbox and INBOX name the same message.
 type resolved struct {
-	mailbox string
-	id      int
+	messageID string
+	mailbox   string
+	id        int
+}
+
+func identity(target mail.Target) resolved {
+	if target.MessageID != "" {
+		return resolved{messageID: strings.ToLower(target.MessageID)}
+	}
+	return resolved{mailbox: strings.ToLower(target.Mailbox), id: target.ID}
 }
 
 // apply runs a triage change over message references. Every reference is resolved and guarded before
@@ -74,7 +85,7 @@ func (app *application) apply(command *cobra.Command, references []string, dryRu
 		if found.MessageID != "" {
 			target.MessageID = found.MessageID
 		}
-		key := resolved{mailbox: target.Mailbox, id: target.ID}
+		key := identity(target)
 		if _, duplicate := seen[key]; duplicate {
 			continue
 		}
