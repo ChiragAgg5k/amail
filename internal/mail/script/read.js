@@ -1,25 +1,14 @@
-function addresses(recipients) {
-  return recipients().map((recipient) => ({ name: recipient.name() || '', address: recipient.address() || '' }));
-}
-
-function optional(read) {
-  try {
-    return read();
-  } catch (error) {
-    return null;
-  }
-}
-
-function run(argv) {
-  const request = JSON.parse(argv[0]);
-  const message = findMessage(request);
+function main(request) {
+  const found = findMessage(request);
+  const message = found.message;
   const sent = optional(() => message.dateSent());
   const received = optional(() => message.dateReceived());
-  return JSON.stringify({
+  return {
     id: message.id(),
-    messageId: message.messageId() || '',
-    subject: message.subject() || '',
-    sender: message.sender() || '',
+    messageId: optional(() => message.messageId()) || '',
+    mailbox: found.mailbox,
+    subject: optional(() => message.subject()) || '',
+    sender: optional(() => message.sender()) || '',
     replyTo: optional(() => message.replyTo()) || '',
     to: addresses(message.toRecipients),
     cc: addresses(message.ccRecipients),
@@ -27,11 +16,11 @@ function run(argv) {
     received: received ? received.toISOString() : null,
     read: message.readStatus(),
     flagged: message.flaggedStatus(),
-    content: message.content() || '',
+    content: optional(() => message.content()) || '',
     attachments: message.mailAttachments().map((attachment) => ({
       name: attachment.name(),
       size: optional(() => attachment.fileSize()) || 0,
       type: optional(() => attachment.mimeType()) || '',
     })),
-  });
+  };
 }
