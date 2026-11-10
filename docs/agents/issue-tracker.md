@@ -14,9 +14,9 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: post the explanation with `gh issue comment <number> --body "..."`, then `gh issue close <number>`. On an already-closed issue, `gh issue close --comment` drops the comment and still exits 0.
 
-Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
+The tracker is `ChiragAgg5k/amail`. Inside a clone of that repository `gh` targets it automatically. In a fork, `gh` can default to either repository, so pass `-R ChiragAgg5k/amail` on every `gh issue` command (and use that path in every `gh api` call): reads, claims, comments and closes must all hit the same tracker.
 
-File issues only into the user's own repo. Never file into `mattpocock/skills` (the repo these skills come from) unless the user owns it. In a fork, `gh` can default to the upstream parent, so before the first `gh issue create` of a session, check the target with `gh repo view --json nameWithOwner` and confirm it with the user if it is not their repo.
+Never file into `mattpocock/skills` (the repo these skills come from). Before the first write of a session, check the target with `gh repo view --json nameWithOwner`; if it is not `ChiragAgg5k/amail`, add `-R ChiragAgg5k/amail` as above.
 
 ## Pull requests as a triage surface
 
@@ -45,6 +45,6 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Map**: a single issue labelled `wayfinder:map`, holding the Notes / Decisions-so-far / Fog body. `gh issue create --label wayfinder:map`.
 - **Child ticket**: an issue linked to the map as a GitHub sub-issue (see **Make an issue a sub-issue of a parent**). Where sub-issues aren't enabled, add the child to a task list in the map body and put `Part of #<map>` at the top of the child body. Labels: `wayfinder:<type>` (`research`/`prototype`/`grilling`/`task`). Once claimed, the ticket is assigned to the driving dev.
 - **Blocking**: see **Blocking** under Conventions.
-- **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (see **Count open blockers**, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
+- **Frontier query**: fetch every child of the map with `gh api repos/ChiragAgg5k/amail/issues/<map>/sub_issues --paginate` (`gh issue list` stops at 30 issues and is not scoped to the map), keep the open ones, drop any with an open blocker (`.issue_dependencies_summary.blocked_by` above 0) or an assignee; first in map order wins.
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
-- **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+- **Resolve**: `gh issue comment <n> --body "<answer>"`, then append a context pointer (gist + link) to the map's Decisions-so-far, then `gh issue close <n>`. The map is updated before the close so a failure part-way leaves the ticket open and visible, not closed and unrecorded. Re-fetch the map body right before editing it; other sessions edit it too.
