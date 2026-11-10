@@ -17,8 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, macos-26, xcode-27]
-        # none: never touch TCC, all: clone the image's Finder Automation rows for every client it lists.
-        seed: [none, all]
+        # none: never touch TCC and only record the consent prompt.
+        # agent: one row in the user TCC.db for the runner agent, the process TCC holds responsible.
+        # all: clone the image's Finder Automation rows for every client it lists, in both databases.
+        seed: [none, agent, all]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -161,7 +163,8 @@ jobs:
             sudo sqlite3 "$db" "select service, client, auth_value, indirect_object_identifier from access where client like '%mail%' or indirect_object_identifier like '%mail%'"
           done
 
-      - name: Mail before seeding
+      - name: Mail without a grant
+        if: matrix.seed == 'none'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
@@ -177,26 +180,32 @@ jobs:
           exit 0
 
       - name: Seed Automation rows for Mail
-        if: matrix.seed == 'all'
+        if: matrix.seed != 'none'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
-          # Clone every Finder Automation row the image ships into a row that targets Mail, keeping the image's own row shape.
+          # Clone the Finder Automation rows the image ships into rows that target Mail, keeping the image's own row shape.
+          # A prompt that times out first leaves a deny row on macOS 27, so this runs before any Apple event reaches Mail.
           seed() {
-            local db=$1 columns
+            local db=$1 clients=$2 columns
             columns=$(sudo sqlite3 "$db" "select group_concat(case name when 'indirect_object_identifier' then '''com.apple.mail''' when 'last_modified' then 'cast(strftime(''%s'', ''now'') as integer)' else '\"' || name || '\"' end, ', ') from pragma_table_info('access')")
             echo "select list for $db: $columns"
             for attempt in 1 2 3 4 5; do
-              sudo sqlite3 -cmd '.timeout 10000' "$db" "insert or replace into access select $columns from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.finder'" && return 0
+              sudo sqlite3 -cmd '.timeout 10000' "$db" "insert or replace into access select $columns from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.finder' and client like '$clients'" && return 0
               echo "insert into $db failed (attempt $attempt)"
               sleep $((attempt * 2))
             done
             return 1
           }
-          seed "$USER_DB"
-          probe "seed user TCC.db" 5 sh -c "exit $?"
-          seed "$SYSTEM_DB"
-          probe "seed system TCC.db" 5 sh -c "exit $?"
+          if [ "${{ matrix.seed }}" = agent ]; then
+            seed "$USER_DB" /opt/hca/hosted-compute-agent
+            probe "seed user TCC.db (agent row only)" 5 sh -c "exit $?"
+          else
+            seed "$USER_DB" %
+            probe "seed user TCC.db" 5 sh -c "exit $?"
+            seed "$SYSTEM_DB" %
+            probe "seed system TCC.db" 5 sh -c "exit $?"
+          fi
           sudo killall tccd
           sleep 2
           for db in "$USER_DB" "$SYSTEM_DB"; do
@@ -207,6 +216,7 @@ jobs:
           probe "seeded rows in user TCC.db" 10 echo "$count"
 
       - name: Launch Mail
+        if: matrix.seed != 'none'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
@@ -218,6 +228,7 @@ jobs:
           exit 0
 
       - name: Probe Mail
+        if: matrix.seed != 'none'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
@@ -246,6 +257,7 @@ jobs:
           exit 0
 
       - name: Build and run amail
+        if: matrix.seed != 'none'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
@@ -255,11 +267,13 @@ jobs:
           exit 0
 
       - name: Dismiss the add-account sheet
+        if: matrix.seed != 'none'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
           probe "sheets of Mail windows" 30 osascript -e 'tell application "System Events" to tell process "Mail" to get {name of every window, count of sheets of every window}'
-          probe "click Cancel on the sheet" 30 osascript -e 'tell application "System Events" to tell process "Mail" to click (first button of (first sheet of (first window whose subrole is "AXStandardWindow")) whose name is "Cancel")'
+          limit 30 osascript -e 'tell application "System Events" to tell process "Mail" to get {class, name, description} of every UI element of sheet 1 of window 1' | cut -c1-1500
+          probe "press Escape on the sheet" 30 osascript -e 'tell application "System Events" to tell process "Mail"' -e 'set frontmost to true' -e 'delay 1' -e 'key code 53' -e 'end tell'
           sleep 8
           shot after-cancel
           probe "Mail still running after Cancel" 10 pgrep -lx Mail
@@ -284,13 +298,17 @@ jobs:
           grep AppleEvents "$TRIAL/tcc.log" | cut -c1-700 | head -12
           echo "Lines naming osascript: $(grep -c osascript "$TRIAL/tcc.log")"
           grep osascript "$TRIAL/tcc.log" | cut -c1-700 | head -6
+          for db in "$USER_DB" "$SYSTEM_DB"; do
+            echo "Final Mail rows in $db:"
+            sudo sqlite3 "$db" "select client, auth_value, auth_reason from access where service = 'kTCCServiceAppleEvents' and indirect_object_identifier = 'com.apple.mail'"
+          done
           echo >> "$GITHUB_STEP_SUMMARY"
           echo "Exit 142 means the hard timeout killed the command." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: trial-${{ matrix.os }}
+          name: trial-${{ matrix.os }}-seed-${{ matrix.seed }}
           path: |
             ~/amail-trial/shots
             ~/amail-trial/tcc.log
