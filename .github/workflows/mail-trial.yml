@@ -12,11 +12,13 @@ permissions:
 
 jobs:
   probe:
-    name: probe (${{ matrix.os }})
+    name: probe (${{ matrix.os }}, seed ${{ matrix.seed }})
     strategy:
       fail-fast: false
       matrix:
         os: [macos-15, macos-26, xcode-27]
+        # none: never touch TCC, all: clone the image's Finder Automation rows for every client it lists.
+        seed: [none, all]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -128,7 +130,7 @@ jobs:
           echo "Console user: $(stat -f %Su /dev/console)"
           ls "$HOME/Library/Mail" 2>&1 | head -5
           {
-            echo "## Mail trial on ${{ matrix.os }}"
+            echo "## Mail trial on ${{ matrix.os }}, seed ${{ matrix.seed }}"
             echo
             echo "$(sw_vers -productName) $(sw_vers -productVersion) ($(sw_vers -buildVersion)), image $ImageOS $ImageVersion, $(csrutil status)"
             echo
@@ -163,14 +165,19 @@ jobs:
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
-          (sleep 25; shot before-seeding; windows) &
+          # version() is answered from the bundle without launching Mail, so accounts.length is the first real Apple event.
           probe "unseeded: Mail.version()" 60 osascript -l JavaScript "$TRIAL/js/version.js"
+          pgrep -lx Mail || echo "Mail is not running after version()"
+          (sleep 25; shot before-seeding; windows) &
+          probe "unseeded: accounts.length" 60 osascript -l JavaScript "$TRIAL/js/accounts.js"
+          probe "unseeded: mailboxes.length" 60 osascript -l JavaScript "$TRIAL/js/mailboxes.js"
           wait
           pkill -x Mail
           sleep 3
           exit 0
 
       - name: Seed Automation rows for Mail
+        if: matrix.seed == 'all'
         continue-on-error: true
         run: |
           source "$TRIAL/lib.sh"
@@ -247,6 +254,22 @@ jobs:
           probe "amail mailboxes --json" 60 ./amail mailboxes --json
           exit 0
 
+      - name: Dismiss the add-account sheet
+        continue-on-error: true
+        run: |
+          source "$TRIAL/lib.sh"
+          probe "sheets of Mail windows" 30 osascript -e 'tell application "System Events" to tell process "Mail" to get {name of every window, count of sheets of every window}'
+          probe "click Cancel on the sheet" 30 osascript -e 'tell application "System Events" to tell process "Mail" to click (first button of (first sheet of (first window whose subrole is "AXStandardWindow")) whose name is "Cancel")'
+          sleep 8
+          shot after-cancel
+          probe "Mail still running after Cancel" 10 pgrep -lx Mail
+          probe "accounts.length after Cancel" 60 osascript -l JavaScript "$TRIAL/js/accounts.js"
+          probe "message counts after Cancel" 60 osascript -l JavaScript "$TRIAL/js/count.js"
+          sleep 5
+          shot final
+          windows
+          exit 0
+
       - name: TCC decisions
         if: always()
         continue-on-error: true
@@ -254,11 +277,13 @@ jobs:
         run: |
           source "$TRIAL/lib.sh"
           limit 180 log show --last 14m --predicate 'subsystem == "com.apple.TCC"' --style compact > "$TRIAL/tcc-full.log"
-          grep -i -E 'com\.apple\.mail|AppleEvents' "$TRIAL/tcc-full.log" > "$TRIAL/tcc.log"
+          grep -i -E 'AppleEvents|osascript|hosted-compute-agent' "$TRIAL/tcc-full.log" > "$TRIAL/tcc.log"
+          wc -l "$TRIAL/tcc-full.log" "$TRIAL/tcc.log"
           rm -f "$TRIAL/tcc-full.log"
-          wc -l "$TRIAL/tcc.log"
-          grep -E 'AUTHREQ_ATTRIBUTION|AUTHREQ_RESULT|Prompting|responsible' "$TRIAL/tcc.log" | cut -c1-600 | head -60
-          ls -la "$HOME/Library/Mail" "$HOME/Library/Mail"/V* 2>&1 | head -40
+          echo "AppleEvents lines: $(grep -c AppleEvents "$TRIAL/tcc.log")"
+          grep AppleEvents "$TRIAL/tcc.log" | cut -c1-700 | head -12
+          echo "Lines naming osascript: $(grep -c osascript "$TRIAL/tcc.log")"
+          grep osascript "$TRIAL/tcc.log" | cut -c1-700 | head -6
           echo >> "$GITHUB_STEP_SUMMARY"
           echo "Exit 142 means the hard timeout killed the command." >> "$GITHUB_STEP_SUMMARY"
 
