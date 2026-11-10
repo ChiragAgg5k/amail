@@ -53,5 +53,5 @@ func (app *application) attachments() *cobra.Command {
 }
 
 func notIdentifier(value string) error {
-	return fmt.Errorf("%q is not a message id; take one from `amail list`", value)
+	return fmt.Errorf("%q is not a message id; take one from `mailslot list`", value)
 }

@@ -1,11 +1,11 @@
-// Command amail reads, searches and writes mail through the Apple Mail app.
+// Command mailslot reads, searches and writes mail through the Apple Mail app.
 package main
 
 import (
 	"os"
 	"runtime/debug"
 
-	"github.com/ChiragAgg5k/amail/internal/cli"
+	"github.com/ChiragAgg5k/mailslot/internal/cli"
 )
 
 const development = "dev"

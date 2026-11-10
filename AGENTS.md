@@ -1,4 +1,4 @@
-# amail
+# mailslot
 
 A Go command line tool that drives Apple Mail through macOS Automation. Read `GLOSSARY.md` for the project's vocabulary before naming anything.
 
@@ -6,7 +6,7 @@ A Go command line tool that drives Apple Mail through macOS Automation. Read `GL
 
 ### Issue tracker
 
-Issues, the wayfinder map and its decision tickets live in GitHub Issues on `ChiragAgg5k/amail`. See `docs/agents/issue-tracker.md`.
+Issues, the wayfinder map and its decision tickets live in GitHub Issues on `ChiragAgg5k/mailslot`. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
