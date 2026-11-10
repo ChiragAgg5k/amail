@@ -1,0 +1,658 @@
+[
+  {
+    "id": 1001,
+    "messageId": "quarterly-1@mail.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Quarterly planning",
+    "sender": "Dana Okafor <dana.okafor@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [
+      {
+        "name": "Priya Lindqvist",
+        "address": "priya.lindqvist@example.com"
+      }
+    ],
+    "sent": "2026-10-05T08:58:00Z",
+    "received": "2026-10-05T09:00:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Hi Sam,\n\nCan we hold the quarterly planning session on Thursday at 14:00?\nPlease bring the draft roadmap and the hiring numbers.\n\nDana",
+    "attachments": []
+  },
+  {
+    "id": 1002,
+    "messageId": "quarterly-2@mail.example.com",
+    "account": "Work",
+    "mailbox": "Sent",
+    "subject": "Re: Quarterly planning",
+    "sender": "Sam Rivera <sam.rivera@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Dana Okafor",
+        "address": "dana.okafor@example.com"
+      }
+    ],
+    "cc": [
+      {
+        "name": "Priya Lindqvist",
+        "address": "priya.lindqvist@example.com"
+      }
+    ],
+    "sent": "2026-10-05T10:15:00Z",
+    "received": "2026-10-05T10:15:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Thursday at 14:00 works for me.\nI will bring the roadmap draft; hiring numbers come from Priya.\n\nSam",
+    "headers": {
+      "In-Reply-To": "<quarterly-1@mail.example.com>",
+      "References": "<quarterly-1@mail.example.com>"
+    },
+    "attachments": []
+  },
+  {
+    "id": 1003,
+    "messageId": "quarterly-3@mail.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Re: Quarterly planning",
+    "sender": "Dana Okafor <dana.okafor@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [
+      {
+        "name": "Priya Lindqvist",
+        "address": "priya.lindqvist@example.com"
+      }
+    ],
+    "sent": "2026-10-05T11:40:00Z",
+    "received": "2026-10-05T11:41:00Z",
+    "read": false,
+    "flag": -1,
+    "content": "Great, I booked the Harbour room.\nAgenda to follow tomorrow.\n\nDana",
+    "headers": {
+      "In-Reply-To": "<quarterly-2@mail.example.com>",
+      "References": "<quarterly-1@mail.example.com> <quarterly-2@mail.example.com>"
+    },
+    "attachments": []
+  },
+  {
+    "id": 1004,
+    "messageId": "agenda-1004@mail.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Agenda and budget for Thursday",
+    "sender": "Dana Okafor <dana.okafor@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-06T08:00:00Z",
+    "received": "2026-10-06T08:01:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Hi Sam,\n\nAttached are the agenda and the draft budget for Thursday.\nComments welcome before Wednesday evening.\n\nDana",
+    "attachments": [
+      {
+        "name": "agenda.txt",
+        "type": "text/plain",
+        "data": "Quarterly planning agenda\n1. Roadmap review\n2. Hiring plan\n3. Budget\n4. Open questions\n"
+      },
+      {
+        "name": "budget.csv",
+        "type": "text/csv",
+        "data": "item,quarter,amount\nTravel,Q1,4200\nTooling,Q1,3100\nHiring,Q1,18000\n"
+      }
+    ]
+  },
+  {
+    "id": 1005,
+    "messageId": "contract-1005@legal.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Contract renewal needs signature",
+    "sender": "Morgan Hale <morgan.hale@legal.example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-07T13:20:00Z",
+    "received": "2026-10-07T13:21:00Z",
+    "read": true,
+    "flag": 0,
+    "content": "Hello Sam,\n\nThe vendor contract renewal is ready for your signature.\nThe current agreement lapses on 31 October.\n\nMorgan Hale\nLegal Operations",
+    "attachments": []
+  },
+  {
+    "id": 1006,
+    "messageId": "design-review-1006@mail.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Design review notes",
+    "sender": "Priya Lindqvist <priya.lindqvist@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-08T15:02:00Z",
+    "received": "2026-10-08T15:03:00Z",
+    "read": true,
+    "flag": 4,
+    "content": "Notes from today:\n- Navigation stays as is\n- Settings page needs a search field\n- Revisit empty states next sprint\n\nPriya",
+    "attachments": []
+  },
+  {
+    "id": 1007,
+    "messageId": "cafe-1007@mail.example.org",
+    "account": "Personal",
+    "mailbox": "Inbox",
+    "subject": "Café rendezvous in Zürich — 東京 ✈",
+    "sender": "Léa Moreau <lea.moreau@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-09T18:30:00Z",
+    "received": "2026-10-09T18:31:00Z",
+    "read": false,
+    "flag": -1,
+    "content": "Salut Sam,\n\nLet us meet at the café by the lake before my flight to 東京.\nSaturday at 10:00? Naïve question: do they take cards?\n\nLéa",
+    "attachments": []
+  },
+  {
+    "id": 1008,
+    "messageId": "statement-1008@billing.example.net",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Your monthly statement is ready",
+    "sender": "Northwind Billing <billing@example.net>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-10T06:00:00Z",
+    "received": "2026-10-10T06:02:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Hello,\n\nYour statement for September is available.\nReference: INV-2041\nAmount due: 128.40 EUR by 30 October.\n\nNorthwind Billing",
+    "attachments": []
+  },
+  {
+    "id": 1009,
+    "messageId": "standup-1009@mail.example.com",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Standup moved to 09:30",
+    "sender": "Jonas Whitfield <jonas.whitfield@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-12T07:45:00Z",
+    "received": "2026-10-12T07:46:00Z",
+    "read": false,
+    "flag": -1,
+    "content": "Morning all,\n\nStandup moves to 09:30 for the rest of the week.\n\nJonas",
+    "attachments": []
+  },
+  {
+    "id": 1010,
+    "messageId": "newsletter-1010@news.example.org",
+    "account": "Work",
+    "mailbox": "Inbox",
+    "subject": "Platform Weekly: issue 42",
+    "sender": "Platform Weekly <newsletter@news.example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-13T05:00:00Z",
+    "received": "2026-10-13T05:04:00Z",
+    "read": false,
+    "flag": -1,
+    "content": "This week:\n- Faster builds with incremental caching\n- A field guide to flaky tests\n- Release notes roundup\n\nUnsubscribe at any time.",
+    "attachments": []
+  },
+  {
+    "id": 1011,
+    "messageId": "offsite-1011@mail.example.com",
+    "account": "Work",
+    "mailbox": "Archive",
+    "subject": "Offsite logistics",
+    "sender": "Priya Lindqvist <priya.lindqvist@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-09-15T09:10:00Z",
+    "received": "2026-09-15T09:11:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Hi team,\n\nThe offsite is at the lakeside venue, 2 to 3 October.\nShuttle leaves the office at 08:00.\n\nPriya",
+    "attachments": []
+  },
+  {
+    "id": 1012,
+    "messageId": "retro-1012@mail.example.com",
+    "account": "Work",
+    "mailbox": "Archive",
+    "subject": "Retrospective summary",
+    "sender": "Jonas Whitfield <jonas.whitfield@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2025-12-18T16:00:00Z",
+    "received": "2025-12-18T16:02:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Year-end retrospective:\n- Keep: pairing on incidents\n- Drop: Friday releases\n- Try: rotating on-call reviews\n\nJonas",
+    "attachments": []
+  },
+  {
+    "id": 1013,
+    "messageId": "draft-1013@mail.example.com",
+    "account": "Work",
+    "mailbox": "Drafts",
+    "subject": "Follow-up on hiring plan",
+    "sender": "Sam Rivera <sam.rivera@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Priya Lindqvist",
+        "address": "priya.lindqvist@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-14T12:00:00Z",
+    "received": "2026-10-14T12:00:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Hi Priya,\n\nCould you share the updated hiring numbers before Thursday?\n\nSam",
+    "attachments": []
+  },
+  {
+    "id": 1014,
+    "messageId": "promo-1014@offers.example.net",
+    "account": "Work",
+    "mailbox": "Trash",
+    "subject": "Last chance: 40% off desk chairs",
+    "sender": "Seatwell Offers <offers@example.net>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-02T10:00:00Z",
+    "received": "2026-10-02T10:05:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Our autumn sale ends tonight.\nEvery desk chair is 40% off with code AUTUMN40.",
+    "attachments": []
+  },
+  {
+    "id": 1015,
+    "messageId": "migration-1015@mail.example.com",
+    "account": "Work",
+    "mailbox": "Projects",
+    "subject": "Migration checklist",
+    "sender": "Ravi Castellano <ravi.castellano@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-15T14:30:00Z",
+    "received": "2026-10-15T14:31:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Checklist for the storage migration:\n1. Freeze writes\n2. Snapshot volumes\n3. Run the copy job\n4. Verify checksums\n\nRavi",
+    "attachments": []
+  },
+  {
+    "id": 1016,
+    "messageId": "status-1016@mail.example.com",
+    "account": "Work",
+    "mailbox": "Sent",
+    "subject": "Weekly status",
+    "sender": "Sam Rivera <sam.rivera@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Dana Okafor",
+        "address": "dana.okafor@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-16T16:45:00Z",
+    "received": "2026-10-16T16:45:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Dana,\n\nThis week: roadmap draft done, migration checklist reviewed, contract renewal pending signature.\n\nSam",
+    "attachments": []
+  },
+  {
+    "id": 1017,
+    "messageId": "book-club-1017@mail.example.org",
+    "account": "Personal",
+    "mailbox": "Inbox",
+    "subject": "Book club next Tuesday",
+    "sender": "Tomasz Ebner <tomasz.ebner@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-17T19:00:00Z",
+    "received": "2026-10-17T19:01:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Hi all,\n\nNext Tuesday we discuss chapters 5 to 9.\nI will bring snacks; someone else bring tea.\n\nTomasz",
+    "attachments": []
+  },
+  {
+    "id": 1018,
+    "messageId": "photos-1018@mail.example.org",
+    "account": "Personal",
+    "mailbox": "All Mail",
+    "subject": "Hiking photos",
+    "sender": "Léa Moreau <lea.moreau@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-11T20:15:00Z",
+    "received": "2026-10-11T20:16:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "The photos from the ridge walk are in the shared album.\nThe one with the fog is my favourite.\n\nLéa",
+    "attachments": []
+  },
+  {
+    "id": 1019,
+    "messageId": "dinner-1019@mail.example.org",
+    "account": "Personal",
+    "mailbox": "Sent Messages",
+    "subject": "Re: Dinner on Friday",
+    "sender": "Sam Rivera <sam.rivera@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Tomasz Ebner",
+        "address": "tomasz.ebner@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-18T11:00:00Z",
+    "received": "2026-10-18T11:00:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Friday at 19:30 is perfect. I will book a table for four.\n\nSam",
+    "attachments": []
+  },
+  {
+    "id": 1020,
+    "messageId": "parcel-1020@shipping.example.net",
+    "account": "Personal",
+    "mailbox": "Inbox",
+    "subject": "Your parcel is on its way",
+    "sender": "Parcelpoint <tracking@shipping.example.net>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-10-19T07:30:00Z",
+    "received": "2026-10-19T07:32:00Z",
+    "read": false,
+    "flag": -1,
+    "content": "Your parcel left the depot this morning.\nExpected delivery: Tuesday between 10:00 and 14:00.\nTracking number: PP-77310-EX",
+    "attachments": []
+  },
+  {
+    "id": 1021,
+    "messageId": "old-1021@example.net",
+    "account": "Old",
+    "mailbox": "Inbox",
+    "subject": "Welcome to your new mailbox",
+    "sender": "Example Net Support <support@example.net>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "old@example.net"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-01-04T09:00:00Z",
+    "received": "2026-01-04T09:03:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Welcome!\n\nYour mailbox is ready. This address will stop receiving mail at the end of the year.\n\nExample Net Support",
+    "attachments": []
+  },
+  {
+    "id": 1022,
+    "messageId": "receipt-1022@shop.example.com",
+    "account": "local",
+    "mailbox": "Receipts",
+    "subject": "Receipt for order 58213",
+    "sender": "Brightleaf Books <orders@shop.example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-09-28T13:10:00Z",
+    "received": "2026-09-28T13:11:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Thank you for your order.\n\nOrder 58213\n1 x Paperback notebook  12.00\n1 x Fountain pen ink     9.50\nTotal                   21.50",
+    "attachments": []
+  },
+  {
+    "id": 1023,
+    "messageId": "receipt-1023@rail.example.org",
+    "account": "local",
+    "mailbox": "Receipts",
+    "subject": "Your train ticket receipt",
+    "sender": "Valley Rail <tickets@rail.example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.org"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-08-21T06:40:00Z",
+    "received": "2026-08-21T06:41:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Return ticket, standard class.\nOutbound 22 August 07:15, return 24 August 18:05.\nTotal paid: 64.80",
+    "attachments": []
+  },
+  {
+    "id": 1024,
+    "messageId": "import-1024@mail.example.com",
+    "account": "local",
+    "mailbox": "Import/fixture",
+    "subject": "Imported: kickoff notes",
+    "sender": "Dana Okafor <dana.okafor@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-03-02T09:00:00Z",
+    "received": "2026-03-02T09:01:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Kickoff notes:\n- Scope agreed for phase one\n- Weekly sync on Mondays\n- Demo at the end of the month\n\nDana",
+    "attachments": []
+  },
+  {
+    "id": 1025,
+    "messageId": "import-1025@mail.example.com",
+    "account": "local",
+    "mailbox": "Import/fixture",
+    "subject": "Imported: floor plan",
+    "sender": "Ravi Castellano <ravi.castellano@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-03-05T11:20:00Z",
+    "received": "2026-03-05T11:21:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Attached is the seating plan for the new floor.\nShout if your desk is in the wrong place.\n\nRavi",
+    "attachments": [
+      {
+        "name": "seating.txt",
+        "type": "text/plain",
+        "data": "Desk 1: Dana Okafor\nDesk 2: Sam Rivera\nDesk 3: Priya Lindqvist\nDesk 4: Ravi Castellano\n"
+      }
+    ]
+  },
+  {
+    "id": 1026,
+    "messageId": "import-1026@mail.example.com",
+    "account": "local",
+    "mailbox": "Import/fixture",
+    "subject": "mailslot-e2e-marker check-in",
+    "sender": "Jonas Whitfield <jonas.whitfield@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-03-09T15:45:00Z",
+    "received": "2026-03-09T15:46:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Quick check-in before the release.\nAll blockers are closed; the build is green.\n\nJonas",
+    "attachments": []
+  },
+  {
+    "id": 1027,
+    "messageId": "import-1027@mail.example.org",
+    "account": "local",
+    "mailbox": "Import/fixture",
+    "subject": "Imported: travel reimbursement",
+    "sender": "Finance Desk <finance@example.org>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-03-12T10:00:00Z",
+    "received": "2026-03-12T10:02:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Your travel reimbursement of 212.30 has been approved.\nIt will appear on the next payroll run.\n\nFinance Desk",
+    "attachments": []
+  },
+  {
+    "id": 1028,
+    "messageId": "archive-1028@mail.example.com",
+    "account": "local",
+    "mailbox": "Archive",
+    "subject": "Old project wrap-up",
+    "sender": "Priya Lindqvist <priya.lindqvist@example.com>",
+    "replyTo": "",
+    "to": [
+      {
+        "name": "Sam Rivera",
+        "address": "sam.rivera@example.com"
+      }
+    ],
+    "cc": [],
+    "sent": "2026-02-20T17:00:00Z",
+    "received": "2026-02-20T17:01:00Z",
+    "read": true,
+    "flag": -1,
+    "content": "Thanks everyone for wrapping up the pilot.\nThe final report is in the shared folder.\n\nPriya",
+    "attachments": []
+  }
+]

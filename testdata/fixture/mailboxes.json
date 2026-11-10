@@ -1,0 +1,66 @@
+[
+  {
+    "account": "Work",
+    "name": "Inbox"
+  },
+  {
+    "account": "Work",
+    "name": "Archive"
+  },
+  {
+    "account": "Work",
+    "name": "Drafts"
+  },
+  {
+    "account": "Work",
+    "name": "Sent"
+  },
+  {
+    "account": "Work",
+    "name": "Trash"
+  },
+  {
+    "account": "Work",
+    "name": "Projects"
+  },
+  {
+    "account": "Personal",
+    "name": "Inbox"
+  },
+  {
+    "account": "Personal",
+    "name": "All Mail"
+  },
+  {
+    "account": "Personal",
+    "name": "Drafts"
+  },
+  {
+    "account": "Personal",
+    "name": "Sent Messages"
+  },
+  {
+    "account": "Personal",
+    "name": "Deleted Items"
+  },
+  {
+    "account": "Old",
+    "name": "Inbox"
+  },
+  {
+    "account": "local",
+    "name": "Receipts"
+  },
+  {
+    "account": "local",
+    "name": "Archive"
+  },
+  {
+    "account": "local",
+    "name": "Trash"
+  },
+  {
+    "account": "local",
+    "name": "Import/fixture"
+  }
+]
