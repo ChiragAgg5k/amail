@@ -105,8 +105,11 @@ func (app *application) mailChecks(ctx context.Context) []check {
 			return []check{failed(checkMail, err), skipped(checkAutomation, unknown), skipped(checkAccounts, reason)}
 		}
 		switch failure.CodeOf(err) {
-		case failure.Permission, failure.Busy:
+		case failure.Permission:
 			return []check{skipped(checkMail, "no answer; see "+checkAutomation), failed(checkAutomation, err), skipped(checkAccounts, reason)}
+		case failure.Busy:
+			busy := failure.New(failure.Busy, "Mail is busy or did not answer", failure.HintOf(err))
+			return []check{failed(checkMail, busy), skipped(checkAutomation, "unknown while Mail is not answering"), skipped(checkAccounts, reason)}
 		}
 		return []check{failed(checkMail, err), skipped(checkAutomation, reason), skipped(checkAccounts, reason)}
 	}

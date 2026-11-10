@@ -91,8 +91,11 @@ func TestDoctorPermission(t *testing.T) {
 
 func TestDoctorTimeout(t *testing.T) {
 	checks := doctorChecks(t, setup{Environment: map[string]string{doctorFault: "timeout"}}, 5)
-	if automation := checks["automation"]; automation.Status != "fail" || !strings.Contains(automation.Hint, "permission prompt") {
-		t.Fatalf("automation check %+v", automation)
+	if mailCheck := checks["mail"]; mailCheck.Status != "fail" || mailCheck.Detail != "Mail is busy or did not answer" || !strings.Contains(mailCheck.Hint, "permission prompt") {
+		t.Fatalf("mail check %+v", mailCheck)
+	}
+	if automation := checks["automation"]; automation.Status != "skip" || !strings.Contains(automation.Detail, "not answering") {
+		t.Fatalf("automation check %+v, want skipped while Mail is not answering", automation)
 	}
 }
 
