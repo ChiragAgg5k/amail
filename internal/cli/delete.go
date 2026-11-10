@@ -19,7 +19,7 @@ func (app *application) delete() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(command *cobra.Command, references []string) error {
 			return app.relocate(command, references, dryRun, app.special(mail.Trash), func(string) error {
-				return failure.New(failure.General, "already in Trash; mailslot never deletes permanently", "empty the Trash in Mail if you mean to erase it")
+				return failure.New(failure.Usage, "already in Trash; mailslot never deletes permanently", "empty the Trash in Mail if you mean to erase it")
 			})
 		},
 	}

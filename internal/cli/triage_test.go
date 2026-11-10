@@ -245,15 +245,31 @@ func TestDeleteRefusesTrash(t *testing.T) {
 	for _, arguments := range [][]string{
 		{"-a", "Work", "delete", "1014", "-m", "Trash"},
 		{"-a", "Work", "delete", "promo-1014@offers.example.net"},
+		{"-a", "Work", "delete", "promo-1014@offers.example.net", "--dry-run"},
+		{"-a", "Work", "delete", "1001", "promo-1014@offers.example.net"},
 	} {
 		outcome := execute(t, arguments...)
-		triageExpectCode(t, outcome, 1)
+		triageExpectCode(t, outcome, 2)
 		if !strings.Contains(outcome.Stderr, "never deletes permanently") {
 			t.Fatalf("refusal lacks its reason:\n%s", outcome.Stderr)
+		}
+		if strings.Contains(outcome.Stdout, "moved to") {
+			t.Fatalf("refusal still reported a move:\n%s", outcome.Stdout)
 		}
 	}
 	if kept := triageRead(t, setup{}, "-a", "Work", "-m", "Trash", "1014"); kept.ID != 1014 {
 		t.Fatalf("1014 changed: %+v", kept)
+	}
+	if first := triageRead(t, setup{}, "-a", "Work", "quarterly-1@mail.example.com"); first.Mailbox != mail.Inbox || first.ID != 1001 {
+		t.Fatalf("a refused delete moved 1001: %d in %s", first.ID, first.Mailbox)
+	}
+}
+
+func TestMoveCollapsesDuplicateReferences(t *testing.T) {
+	rows := triageRun(t, setup{}, "-a", "Work", "move", "1001", "quarterly-1@mail.example.com", "--to", "Projects")
+	triageExpectMove(t, rows, "Projects", 1001)
+	if moved := triageRead(t, setup{}, "-a", "Work", "quarterly-1@mail.example.com"); moved.Mailbox != "Projects" {
+		t.Fatalf("1001 is in %s", moved.Mailbox)
 	}
 }
 

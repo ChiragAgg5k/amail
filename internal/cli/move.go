@@ -53,7 +53,7 @@ func (app *application) move() *cobra.Command {
 }
 
 // relocate moves messages into the mailbox that pick chooses for the account. A message already there
-// is refused before anything changes when its mailbox is known up front, and when it is reached otherwise.
+// is refused before anything changes, wherever its reference found it.
 func (app *application) relocate(command *cobra.Command, references []string, dryRun bool, pick destination, refuse refusal) error {
 	ctx := command.Context()
 	account, err := app.resolve(ctx)
@@ -64,21 +64,16 @@ func (app *application) relocate(command *cobra.Command, references []string, dr
 	if err != nil {
 		return err
 	}
-	for _, value := range references {
-		reference, err := mail.ParseReference(value)
-		if err != nil {
-			return err
-		}
-		if source := locate(command, account, reference).Mailbox; strings.EqualFold(source, target) {
+	move := func(ctx context.Context, message mail.Target) (mail.Summary, error) {
+		return app.backend.Move(ctx, message, target)
+	}
+	arrived := func(message mail.Target) error {
+		if strings.EqualFold(message.Mailbox, target) {
 			return refuse(target)
 		}
+		return nil
 	}
-	return app.apply(command, references, dryRun, "moved to "+target, func(ctx context.Context, message mail.Target) (mail.Summary, error) {
-		if strings.EqualFold(message.Mailbox, target) {
-			return mail.Summary{}, refuse(target)
-		}
-		return app.backend.Move(ctx, message, target)
-	}, true)
+	return app.apply(command, references, dryRun, "moved to "+target, move, true, arrived)
 }
 
 // special finds the account's mailbox with the given role.
