@@ -1,0 +1,4 @@
+[
+  {"name": "Work", "addresses": ["alex@example.com", "a@example.com"], "kind": "imap", "enabled": true},
+  {"name": "Home", "addresses": ["alex@example.org"], "kind": "iCloud", "enabled": true}
+]

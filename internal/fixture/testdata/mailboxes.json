@@ -1,0 +1,9 @@
+[
+  {"account": "Work", "name": "Inbox"},
+  {"account": "Work", "name": "Archive"},
+  {"account": "Work", "name": "Drafts"},
+  {"account": "Work", "name": "Sent"},
+  {"account": "Home", "name": "Inbox"},
+  {"account": "Home", "name": "Sent Messages"},
+  {"account": "local", "name": "Import/fixture"}
+]
