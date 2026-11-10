@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	netmail "net/mail"
 	"os"
 	"slices"
 	"strings"
@@ -17,12 +16,10 @@ import (
 
 // mailing holds the templated fields of a merge, one draft per CSV row.
 type mailing struct {
-	to        []string
-	cc        []string
-	subject   string
-	from      string
-	signature string
-	dryRun    bool
+	to      []string
+	cc      []string
+	subject string
+	dryRun  bool
 }
 
 // merged is one row of a merge's report.
@@ -56,8 +53,8 @@ func (app *application) merge() *cobra.Command {
 			if err := outgoing(account); err != nil {
 				return err
 			}
-			if options.from != "" && !account.Owns(addressOf(options.from)) {
-				return failure.New(failure.Usage, fmt.Sprintf("%s is not an address of account %q", options.from, account.Name), "pick one of: "+strings.Join(account.Addresses, ", "))
+			if err := composition.sender(account); err != nil {
+				return err
 			}
 			output := command.OutOrStdout()
 			if options.dryRun {
@@ -84,8 +81,8 @@ func (app *application) merge() *cobra.Command {
 	command.Flags().StringVar(&composition.body, "body", "", "message text template")
 	command.Flags().StringVar(&composition.bodyFile, "body-file", "", "file holding the message text template (- for standard input)")
 	command.Flags().StringArrayVar(&composition.attachments, "attach", nil, "file to attach to every draft (repeatable)")
-	command.Flags().StringVar(&options.from, "from", "", "sender address; it must belong to the account")
-	command.Flags().StringVar(&options.signature, "signature", "", "name of a Mail signature to append")
+	command.Flags().StringVar(&composition.from, "from", "", "sender address; it must belong to the account")
+	command.Flags().StringVar(&composition.signature, "signature", "", "name of a Mail signature to append")
 	command.MarkFlagsMutuallyExclusive("body", "body-file")
 	_ = command.MarkFlagRequired("to")
 	_ = command.MarkFlagRequired("subject")
@@ -148,8 +145,8 @@ func (options mailing) drafts(path string, composition *composition, input io.Re
 			return nil, nil, failure.Wrap(failure.Usage, err, "")
 		}
 		drafts = append(drafts, mail.Draft{
-			From:        options.from,
-			Signature:   options.signature,
+			From:        composition.from,
+			Signature:   composition.signature,
 			To:          recipients,
 			Cc:          copied,
 			Subject:     filledSubject,
@@ -198,14 +195,6 @@ func fillAll(templates []merge.Template, row merge.Row) ([]string, error) {
 		}
 	}
 	return values, nil
-}
-
-func addressOf(raw string) string {
-	parsed, err := netmail.ParseAddress(raw)
-	if err != nil {
-		return strings.TrimSpace(raw)
-	}
-	return parsed.Address
 }
 
 func (app *application) mailed(output io.Writer, rows []merged, dryRun bool) error {
