@@ -21,7 +21,7 @@ const (
 	searchDescription = `Find messages by subject, sender, date or unread state.
 
 The text matches the subject or the sender. Message bodies are searched only with --body, which
-reads every candidate message (about 300 ms each), so it needs --since to narrow the search.
+reads every candidate message one by one, so it needs --since to narrow the search.
 
 One mailbox is searched by default (Inbox). Repeat --mailbox to search several, or use
 --all-mailboxes for every mailbox of the account; they are searched one after another and the
@@ -53,7 +53,7 @@ func (app *application) search() *cobra.Command {
 				return failure.New(failure.Usage, "give some text or at least one of --from, --subject, --since, --unread", "")
 			}
 			if query.Body && (query.Text == "" || query.Since == nil) {
-				return failure.New(failure.Usage, "--body needs search text and --since", "reading bodies costs about 300 ms per message, so narrow the search with --since")
+				return failure.New(failure.Usage, "--body needs search text and --since", "bodies are read one message at a time, so narrow the search with --since")
 			}
 			if everywhere && command.Flags().Changed(mailboxName) {
 				return failure.New(failure.Usage, fmt.Sprintf("--%s and --%s cannot be used together", allMailboxesName, mailboxName), usageHint(command))
