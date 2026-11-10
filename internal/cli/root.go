@@ -120,6 +120,9 @@ func (app *application) track(command *cobra.Command) {
 
 // prepare runs before every command: it checks the platform, applies the safety switches and opens the backend.
 func (app *application) prepare(command *cobra.Command, _ []string) error {
+	if command.Annotations[preparesItself] == annotationMarker {
+		return nil
+	}
 	app.fixture = os.Getenv(fixtureVariable)
 	if app.fixture == "" && runtime.GOOS != supportedSystem {
 		return failure.New(failure.General, "mailslot drives the Apple Mail app, so it only runs on macOS", "")
