@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-labelledby="title desc">
+  <title id="title">mailslot</title>
+  <desc id="desc">A locked door with a mail slot and a letter passing through it. Apple Mail from the terminal, for the accounts other tools can't sign in to.</desc>
+  <defs>
+    <clipPath id="above-slit"><rect x="60" y="40" width="300" height="150"/></clipPath>
+  </defs>
+  <g transform="translate(112 0)">
+    <rect x="88" y="-20" width="284" height="360" fill="#f6f8fa" stroke="#1f2328" stroke-width="3"/>
+    <rect x="116" y="-20" width="228" height="88" fill="none" stroke="#afb8c1" stroke-width="2"/>
+    <rect x="116" y="262" width="228" height="88" fill="none" stroke="#afb8c1" stroke-width="2"/>
+    <line x1="40" y1="319" x2="420" y2="319" stroke="#afb8c1" stroke-width="2"/>
+    <rect x="322" y="98" width="28" height="54" rx="14" fill="#ffffff" stroke="#1f2328" stroke-width="2.5"/>
+    <circle cx="336" cy="118" r="5.5" fill="#1f2328"/>
+    <path d="M333.5 120h5l2.5 18h-10z" fill="#1f2328"/>
+    <rect x="116" y="168" width="196" height="48" rx="8" fill="#ffffff" stroke="#1f2328" stroke-width="3"/>
+    <circle cx="130" cy="192" r="3" fill="#1f2328"/>
+    <circle cx="298" cy="192" r="3" fill="#1f2328"/>
+    <g clip-path="url(#above-slit)">
+      <g transform="rotate(-7 214 192)">
+        <rect x="156" y="102" width="116" height="130" rx="4" fill="#fff8f0" stroke="#bc4c00" stroke-width="3"/>
+        <path d="M156 106l58 43 58-43" fill="none" stroke="#bc4c00" stroke-width="3" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <rect x="144" y="187" width="140" height="10" rx="5" fill="#1f2328" stroke="#1f2328" stroke-width="0"/>
+    <text x="452" y="150" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="88" font-weight="700" letter-spacing="-3" fill="#1f2328">mail<tspan fill="#bc4c00">slot</tspan></text>
+    <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="27" fill="#59636e">
+      <text x="456" y="206">Apple Mail from the terminal,</text>
+      <text x="456" y="242">for the accounts other tools can't sign in to.</text>
+    </g>
+  </g>
+</svg>
