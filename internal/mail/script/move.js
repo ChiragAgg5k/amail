@@ -7,7 +7,8 @@ function main(request) {
   const found = findMessage(request);
   const message = found.message;
   const destination = findMailbox({ account: request.account, mailbox: request.destination });
-  const destinationName = optional(() => destination.name()) || request.destination;
+  // The requested path, not the leaf name, so output matches findMessage (e.g. Import/fixture).
+  const destinationName = request.destination || 'Inbox';
   const received = optional(() => message.dateReceived());
   const captured = {
     id: 0,
