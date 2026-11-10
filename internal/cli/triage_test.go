@@ -197,6 +197,9 @@ func TestMoveRefusals(t *testing.T) {
 	triageExpectCode(t, execute(t, "-a", "Work", "move", "1001", "--to", "inbox"), 2)
 	triageExpectCode(t, execute(t, "-a", "Work", "move", "quarterly-1@mail.example.com", "--to", "Inbox"), 2)
 	triageExpectCode(t, execute(t, "-a", "Work", "move", "1001", "--to", "Nowhere"), 4)
+	if unknown := execute(t, "-a", "Work", "--json", "move", "1001", "--to", "Nowhere"); unknown.Code != 4 || unknown.Stdout != "" {
+		t.Fatalf("a move that changed nothing printed %q (exit code %d)", unknown.Stdout, unknown.Code)
+	}
 	if moved := triageRead(t, setup{}, "-a", "Work", "quarterly-1@mail.example.com"); moved.Mailbox != mail.Inbox || moved.ID != 1001 {
 		t.Fatalf("a refused move changed 1001: %d in %s", moved.ID, moved.Mailbox)
 	}
@@ -332,8 +335,8 @@ func triageExpectReadOnly(t *testing.T, options setup) {
 	t.Helper()
 	for name, arguments := range triageCommands {
 		outcome := executeWith(t, options, append([]string{"-a", "Work"}, arguments...)...)
-		if outcome.Code != 6 {
-			t.Errorf("%s exit code %d, want 6\n%s", name, outcome.Code, outcome.Stderr)
+		if outcome.Code != 6 || !strings.Contains(outcome.Stderr, "use --dry-run to preview") {
+			t.Errorf("%s exit code %d, want 6 with a --dry-run hint\n%s", name, outcome.Code, outcome.Stderr)
 		}
 		executeWith(t, options, append(append([]string{"-a", "Work"}, arguments...), "--dry-run")...).succeeded(t)
 	}

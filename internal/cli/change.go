@@ -113,6 +113,9 @@ func (app *application) apply(command *cobra.Command, references []string, dryRu
 	for index, target := range targets {
 		after, err := act(ctx, target)
 		if err != nil {
+			if index == 0 {
+				return err
+			}
 			if printed := app.changed(output, rows[:index], false); printed != nil {
 				return printed
 			}

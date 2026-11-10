@@ -158,7 +158,11 @@ func TestSendNoSendConfig(t *testing.T) {
 
 func TestSendReadOnly(t *testing.T) {
 	switched := setup{Environment: map[string]string{"MAILSLOT_READ_ONLY": "1"}}
-	composeExpect(t, executeWith(t, switched, composeArguments()...), failure.Refused)
+	refused := executeWith(t, switched, composeArguments()...)
+	composeExpect(t, refused, failure.Refused)
+	if strings.Contains(refused.Stderr, "--dry-run") || !strings.Contains(refused.Stderr, "remove the switch to allow this command") {
+		t.Fatalf("send has no --dry-run, so the hint should not offer it:\n%s", refused.Stderr)
+	}
 	composeExpect(t, executeWith(t, switched, "reply", "1001", "-a", "Work", "--body", "Yes"), failure.Refused)
 	composeAbsent(t, composeDrafts, composeSubject)
 }

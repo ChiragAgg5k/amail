@@ -150,10 +150,14 @@ func (app *application) prepare(command *cobra.Command, _ []string) error {
 // guard refuses commands that the safety switches rule out.
 func (app *application) guard(command *cobra.Command) error {
 	if app.switches.ReadOnly && alters(command) && !enabled(command, dryRunName) {
+		hint := "remove the switch to allow this command"
+		if command.Flags().Lookup(dryRunName) != nil {
+			hint = "use --dry-run to preview, or remove the switch"
+		}
 		return failure.New(
 			failure.Refused,
 			fmt.Sprintf("mailslot is read-only (read_only in the config or MAILSLOT_READ_ONLY); %s would change Mail", command.Name()),
-			"use --dry-run to preview, or remove the switch",
+			hint,
 		)
 	}
 	if app.switches.NoSend && enabled(command, sendName) {
