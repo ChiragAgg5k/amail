@@ -8,6 +8,8 @@ const preludeWindows = [3, 14, 60, 365, 3650];
 const preludeNotPermitted = -1743;
 const preludeTimedOut = -1712;
 const preludeFields = ['messageId', 'subject', 'sender', 'dateReceived', 'readStatus', 'flaggedStatus'];
+// The properties Mail can refuse for a single message, which `describe` reads leniently too.
+const preludeGuarded = ['messageId', 'subject', 'sender', 'dateReceived'];
 // How many one-by-one reads of a property cost as much as reading it for one message
 // of a whole mailbox at once (about 8 ms against 35 microseconds, measured on a
 // 13,370-message mailbox). The Message-ID is 4 to 25 times dearer to read in bulk.
@@ -338,7 +340,10 @@ function preludeRows(table, positions, mailboxName) {
   return positions.map((position) => {
     const id = table.ids[position];
     const message = table.messages.byId(id);
-    const value = (property) => (property in table.columns ? table.columns[property][position] : message[property]());
+    const value = (property) => {
+      if (property in table.columns) return table.columns[property][position];
+      return preludeGuarded.indexOf(property) >= 0 ? optional(() => message[property]()) : message[property]();
+    };
     try {
       return {
         id: id,
